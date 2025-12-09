@@ -441,6 +441,19 @@ A: Check that `HEADLESS=false` is set in your `.env`.
 A: Chromium inside the container can't access the internet.  
 Solution: Make sure to use `network_mode: host` in your `docker-compose.yml`. Docker bridge networks can block browser connectivity.
 
+**Q: API returns 0 posts with `graphqlCaptured: false`**  
+A: This warning means Instagram's GraphQL API did not respond to the scraper. This typically indicates:
+
+| Possible Cause          | Solution                                                                                                            |
+| ----------------------- | ------------------------------------------------------------------------------------------------------------------- |
+| **Account restriction** | Log into the account manually on a browser, complete any verification challenge. Check `/accounts/status` endpoint. |
+| **Too many requests**   | The account is rate-limited. Wait 15-30 minutes before retrying. Add more accounts to distribute load.              |
+| **Session expired**     | Restart the scraper with `docker compose restart instagram-post-scraper`. Sessions will be re-validated.            |
+| **Instagram blocking**  | Try using aged accounts (6+ months old). Use the progressive usage strategy described above.                        |
+
+> [!NOTE]
+> If `graphqlCaptured: true` but `posts: []`, the profile genuinely has no posts (or all posts were filtered by `createdAt`). This is normal behavior.
+
 ---
 
 **Happy Scraping!** 🕷️

@@ -400,7 +400,7 @@ export class InstagramScraperService implements OnModuleInit {
       await humanDelay(500, 1500);
 
       // Scrape posts
-      const posts = await this.scrapePostsFromPage(page, targetUsername, maxPosts);
+      const { posts, graphqlCaptured } = await this.scrapePostsFromPage(page, targetUsername, maxPosts);
 
       // Log posts with filter information
       this.logger.log(`📊 [${targetUsername}] Raw posts count: ${posts.length}`);
@@ -421,6 +421,8 @@ export class InstagramScraperService implements OnModuleInit {
         success: true,
         username: targetUsername,
         posts: filteredPosts,
+        postsCount: filteredPosts.length,
+        graphqlCaptured,
         scrapedWith: account.username,
         scrapedAt: Math.floor(Date.now() / 1000),
       };
@@ -561,7 +563,7 @@ export class InstagramScraperService implements OnModuleInit {
       await humanDelay(500, 1500);
 
       // Scrape posts
-      const posts = await this.scrapePostsFromPage(page, targetUsername, maxPosts);
+      const { posts, graphqlCaptured } = await this.scrapePostsFromPage(page, targetUsername, maxPosts);
 
       // Log posts with filter information
       this.logger.log(`📊 Raw posts count: ${posts.length}`);
@@ -597,6 +599,8 @@ export class InstagramScraperService implements OnModuleInit {
         success: true,
         username: targetUsername,
         posts: filteredPosts,
+        postsCount: filteredPosts.length,
+        graphqlCaptured,
         scrapedWith: account.username,
         scrapedAt: Math.floor(Date.now() / 1000),
       };
@@ -698,7 +702,7 @@ export class InstagramScraperService implements OnModuleInit {
     page: Page,
     username: string,
     maxPosts?: number,
-  ): Promise<CleanedInstagramPost[]> {
+  ): Promise<{ posts: CleanedInstagramPost[]; graphqlCaptured: boolean }> {
     const limit = maxPosts || this.maxPostsPerRequest;
     const posts: CleanedInstagramPost[] = [];
     const uniqueIds = new Set<string>();
@@ -776,8 +780,22 @@ export class InstagramScraperService implements OnModuleInit {
     // Sort by createdAt DESCENDING (newest first) - this ensures we get the most recent posts
     posts.sort((a, b) => b.createdAt - a.createdAt);
 
+    // Track if we captured any GraphQL responses
+    const graphqlCaptured = graphqlResponses.length > 0;
+
+    // Log warning if no GraphQL was captured (potential account restriction)
+    if (!graphqlCaptured) {
+      this.logger.warn(`⚠️ [${username}] No GraphQL responses captured. This may indicate:`);
+      this.logger.warn(`   • The Instagram account used for scraping may have restrictions`);
+      this.logger.warn(`   • The profile may have changed privacy settings`);
+      this.logger.warn(`   • Instagram may be blocking automated access`);
+      this.logger.warn(`   👉 Check /accounts/status to verify account health`);
+    } else if (posts.length === 0) {
+      this.logger.log(`📭 [${username}] GraphQL captured but 0 posts found - profile may have no posts or all posts filtered`);
+    }
+
     // Apply limit AFTER sorting (so we get the newest posts, not oldest pinned posts)
-    return posts.slice(0, limit);
+    return { posts: posts.slice(0, limit), graphqlCaptured };
   }
 
   /**

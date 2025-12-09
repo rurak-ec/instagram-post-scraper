@@ -17,7 +17,6 @@ RUN apt-get update && apt-get install -y \
 
 # Copy package files (including .yarnrc.yml for Yarn version)
 COPY package.json yarn.lock .yarnrc.yml ./
-COPY .yarn ./.yarn
 
 # Install dependencies with Yarn
 RUN yarn install --immutable
@@ -56,7 +55,6 @@ ENV DOCKER_ENV=true
 
 # Copy package files
 COPY package.json yarn.lock .yarnrc.yml ./
-COPY .yarn ./.yarn
 
 # Install production dependencies only with Yarn
 RUN yarn install --immutable

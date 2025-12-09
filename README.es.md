@@ -14,13 +14,40 @@ API REST robusta para scraping de Instagram, diseñada específicamente para des
 Si eres desarrollador y quieres levantar el proyecto YA, sigue esto:
 
 ### 1. Requisitos Críticos ⚠️
+
 Para que este scraper funcione de manera confiable y evite bloqueos ("soft bans" o "rate limits"), necesitas cuentas de Instagram dedicadas.
 
-| Requisito | Cantidad | Nota |
-|-----------|----------|------|
-| **Mínimo Absoluto** | 2 Cuentas | Funciona, pero si una cae (challenge/lock), el sistema se degrada al 50%. |
-| **Recomendado** | **5+ Cuentas** | **Estabilidad Óptima**. Permite rotación amplia y "descanso" de cuentas. |
-| **Infinito** | N Cuentas | El sistema soporta tantas cuentas como agregues al `.env`. |
+| Requisito           | Cantidad       | Nota                                                                      |
+| ------------------- | -------------- | ------------------------------------------------------------------------- |
+| **Mínimo Absoluto** | 2 Cuentas      | Funciona, pero si una cae (challenge/lock), el sistema se degrada al 50%. |
+| **Recomendado**     | **5+ Cuentas** | **Estabilidad Óptima**. Permite rotación amplia y "descanso" de cuentas.  |
+| **Infinito**        | N Cuentas      | El sistema soporta tantas cuentas como agregues al `.env`.                |
+
+> [!WARNING]
+> **⚠️ Riesgos de Detección de Comportamiento Automatizado**
+>
+> Instagram detecta y restringe activamente la actividad automatizada. Puedes recibir avisos como "Detectamos actividad inusual" o "Intento de inicio de sesión sospechoso". Aquí están las mejores prácticas para minimizar riesgos:
+
+#### 🛡️ Recomendaciones para Cuentas
+
+| Recomendación                        | Por Qué Es Importante                                                                                                                     |
+| ------------------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------- |
+| **Usa cuentas con antigüedad**       | Las cuentas creadas recientemente (< 6 meses) tienen más probabilidad de disparar la detección. Usa cuentas que ya llevan tiempo activas. |
+| **Empieza gradualmente**             | No comiences con scraping intensivo. Inicia con 2-3 peticiones por cuenta por hora e incrementa progresivamente durante días/semanas.     |
+| **Deja que las cuentas "descansen"** | Rota frecuentemente para que cada cuenta tenga períodos de enfriamiento. El sistema lo hace automáticamente.                              |
+| **Más cuentas = más seguro**         | Tener 5-10+ cuentas distribuye la carga y reduce el riesgo individual de cada cuenta.                                                     |
+| **No uses tu cuenta principal**      | Siempre usa cuentas secundarias/dedicadas. Si una se restringe, no pierdes tu perfil personal.                                            |
+
+#### 📈 Estrategia de Uso Progresivo
+
+```
+Semana 1:  🐢 Uso ligero (2-3 scrapes/cuenta/hora)
+Semana 2:  🚶 Uso moderado (5-8 scrapes/cuenta/hora)
+Semana 3+: 🏃 Uso normal (10-15 scrapes/cuenta/hora)
+```
+
+> [!TIP]
+> **Si una cuenta es marcada**: No entres en pánico. El sistema rota automáticamente a cuentas saludables. Inicia sesión manualmente en la cuenta afectada, completa cualquier verificación de desafío, y se recuperará. Tener más cuentas significa que una cuenta marcada no detiene tu operación.
 
 ### 2. Configuración de Entorno
 
@@ -48,6 +75,7 @@ Diferenciamos claramente entre **Desarrollo** (donde quieres VER qué pasa) y **
 En este modo, el navegador se abre visualmente (`headless: false`). Ves exactamente cómo el bot entra a Instagram, hace login y navega.
 
 **Configuración en `.env`:**
+
 ```properties
 NODE_ENV=development
 HEADLESS=false       <-- CLAVE: Esto abre el navegador
@@ -55,9 +83,11 @@ VERBOSE_LOGS=true    <-- CLAVE: Logs detallados en consola
 ```
 
 **Comando:**
+
 ```bash
 yarn dev
 ```
+
 > El servidor iniciará en `http://localhost:3000`. Verás Chromium abrirse automáticamente.
 
 ---
@@ -68,10 +98,12 @@ Este es el modo "Fire & Forget". Todo corre en contenedores Docker, sin interfaz
 
 **Configuración (Automática en Docker):**
 No necesitas tocar el `.env` para esto. El `docker compose.yml` fuerza:
+
 - `HEADLESS=true`
 - `NODE_ENV=production`
 
 **Comandos de Despliegue:**
+
 ```bash
 # 1. Levantar servicios (Build automático)
 docker compose up -d
@@ -87,26 +119,31 @@ docker compose restart      # Reiniciar servicios (rápido)
 ### 🛠️ Comandos de Mantenimiento
 
 **1. Recompilar (Si cambias código):**
+
 ```bash
 docker compose up -d --build
 ```
 
 **2. Ver Logs (Vital para debugging):**
+
 ```bash
 docker compose logs -f --tail 100
 ```
 
 **3. Reiniciar solo el Scraper:**
+
 ```bash
 docker compose restart instagram-post-scraper
 ```
 
 **4. Ver estado de contenedores:**
+
 ```bash
 docker compose ps
 ```
 
 **5. Reconstruir TODO desde cero (Reset Completo):**
+
 ```bash
 # Detiene y elimina contenedores, redes y volúmenes
 docker compose down -v
@@ -124,6 +161,7 @@ docker compose build --no-cache && docker compose up -d
 > ⚠️ **Advertencia**: Esto eliminará todas las sesiones guardadas. Tendrás que volver a iniciar sesión en todas las cuentas de Instagram.
 
 > **Persistencia**: Los volúmenes de Docker aseguran que **NO** tengas que loguearte cada vez.
+>
 > - `sessions/`: Guarda cookies/localStorage de cada bot.
 > - `data/`: Guarda estadísticas de rotación.
 
@@ -139,11 +177,11 @@ Este proyecto usa **`network_mode: host`** en lugar de redes virtuales de Docker
 
 **Cómo conectarse desde otros contenedores Docker:**
 
-| Desde | URL de conexión |
-|-------|-----------------|
-| Host (tu máquina) | `http://localhost:3000` |
-| Otro contenedor (Linux) | `http://172.17.0.1:3000` o `http://<IP-HOST>:3000` |
-| Otro contenedor (Docker Desktop) | `http://host.docker.internal:3000` |
+| Desde                            | URL de conexión                                    |
+| -------------------------------- | -------------------------------------------------- |
+| Host (tu máquina)                | `http://localhost:3000`                            |
+| Otro contenedor (Linux)          | `http://172.17.0.1:3000` o `http://<IP-HOST>:3000` |
+| Otro contenedor (Docker Desktop) | `http://host.docker.internal:3000`                 |
 
 **Ejemplo: Consumir desde otro docker-compose.yml:**
 
@@ -182,33 +220,38 @@ curl -X POST http://localhost:3000/instagram-post-scraper \
 // Tu cliente API
 async function getInstagramPosts(targetUsername: string) {
   try {
-    const response = await fetch('http://localhost:3000/instagram-post-scraper', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        username: targetUsername
-      })
-    });
+    const response = await fetch(
+      "http://localhost:3000/instagram-post-scraper",
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          username: targetUsername,
+        }),
+      }
+    );
 
     const data = await response.json();
 
     if (data.success) {
       console.log(`✅ Batch processed: ${data.totalProfiles} profiles`);
-      data.results.forEach(result => {
-         if (result.success) {
-            console.log(`\n📌 Profile: ${result.username}`);
-            console.log(`🤖 Scraped with: ${result.scrapedWith}`);
-            console.log(`📦 Posts: ${result.postsCount}`);
-         } else {
-            console.error(`❌ Profile ${result.username} failed: ${result.error}`);
-         }
+      data.results.forEach((result) => {
+        if (result.success) {
+          console.log(`\n📌 Profile: ${result.username}`);
+          console.log(`🤖 Scraped with: ${result.scrapedWith}`);
+          console.log(`📦 Posts: ${result.postsCount}`);
+        } else {
+          console.error(
+            `❌ Profile ${result.username} failed: ${result.error}`
+          );
+        }
       });
       return data.results;
     } else {
-      console.error('❌ Error in scraper:', data);
+      console.error("❌ Error in scraper:", data);
     }
   } catch (error) {
-    console.error('❌ Error de red:', error);
+    console.error("❌ Error de red:", error);
   }
 }
 ```
@@ -218,6 +261,7 @@ async function getInstagramPosts(targetUsername: string) {
 **⚡ Nuevo: Procesamiento Simultáneo**
 
 El modo batch ahora ejecuta todos los scrapes **en paralelo** usando múltiples pestañas en el mismo navegador. Esto significa:
+
 - Todos los perfiles se scrapean **simultáneamente** (no secuencialmente)
 - Usa la **misma cuenta de Instagram** para todo el batch
 - **Emulated Focus** habilitado en cada pestaña para evitar problemas de tabs inactivas
@@ -234,9 +278,9 @@ curl -X POST http://localhost:3000/instagram-post-scraper \
 > **Nota**: El batch completo tarda aproximadamente lo que tarda el perfil más lento, no la suma de todos.
 
 ### 4. Filtrar por Fecha (`createdAt`)
-                                
+
 Puedes especificar una fecha para obtener solo los posts publicados DESPUÉS de ese timestamp UNIX.
-                                
+
 ```bash
 curl -X POST http://localhost:3000/instagram-post-scraper \
   -H "Content-Type: application/json" \
@@ -274,6 +318,7 @@ curl http://localhost:3000/accounts/status
 ```
 
 **Respuesta:**
+
 ```json
 {
   "totalAccounts": 3,
@@ -319,7 +364,7 @@ instagram-post-scraper/
 ### Cómo funciona la Rotación ("The Secret Sauce")
 
 1. **Request Entrante**: Usuario pide scrapear `@leomessi`.
-2. **Account Manager**: 
+2. **Account Manager**:
    - Mira tu pool de cuentas (ej. 5 bots).
    - Filtra las que están "Healthy" (no bloqueadas recientemente).
    - Selecciona la **Menos Usada** (Lowest Usage Score) o Round-Robin.
@@ -384,6 +429,7 @@ Solución: `kill -9 $(lsof -t -i:3000)`
 **Q: Mis cuentas se bloquean (Challenge Required)**  
 A: Estás scrapeando demasiado rápido con muy pocas cuentas.
 Solución:
+
 1. Agrega más cuentas al `.env`.
 2. Aumenta el delay entre requests.
 3. Docker reinicia automáticamente las sesiones malas, pero necesitas "calma" en los requests.
@@ -396,4 +442,5 @@ A: Chromium dentro del contenedor no puede acceder a internet.
 Solución: Asegúrate de usar `network_mode: host` en tu `docker-compose.yml`. Las redes bridge de Docker pueden bloquear la conectividad del navegador.
 
 ---
+
 **Happy Scraping!** 🕷️

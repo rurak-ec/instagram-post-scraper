@@ -1,170 +1,172 @@
-# 📘 Instagram Scraper API - Guía del Desarrollador
+# 📘 Instagram Scraper API - Developer Guide
 
-> **Project Status**: Activo & Estable 🚀
+> **Project Status**: Active & Stable 🚀
 > **Tech Stack**: NestJS, Playwright, Docker, TypeScript
 
-API REST robusta para scraping de Instagram, diseñada específicamente para desarrolladores que necesitan alta disponibilidad y evasión de bloqueos mediante un sistema inteligente de rotación de cuentas.
+[🇪🇸 Leer en Español](./README.es.md)
+
+Robust REST API for Instagram scraping, specifically designed for developers who need high availability and ban evasion through an intelligent account rotation system.
 
 ---
 
-## ⚡ Quick Start (Para Desarrolladores)
+## ⚡ Quick Start
 
-Si eres desarrollador y quieres levantar el proyecto YA, sigue esto:
+If you're a developer and want to get the project running NOW, follow these steps:
 
-### 1. Requisitos Críticos ⚠️
-Para que este scraper funcione de manera confiable y evite bloqueos ("soft bans" o "rate limits"), necesitas cuentas de Instagram dedicadas.
+### 1. Critical Requirements ⚠️
+For this scraper to work reliably and avoid blocks ("soft bans" or "rate limits"), you need dedicated Instagram accounts.
 
-| Requisito | Cantidad | Nota |
-|-----------|----------|------|
-| **Mínimo Absoluto** | 2 Cuentas | Funciona, pero si una cae (challenge/lock), el sistema se degrada al 50%. |
-| **Recomendado** | **5+ Cuentas** | **Estabilidad Óptima**. Permite rotación amplia y "descanso" de cuentas. |
-| **Infinito** | N Cuentas | El sistema soporta tantas cuentas como agregues al `.env`. |
+| Requirement | Quantity | Note |
+|-------------|----------|------|
+| **Absolute Minimum** | 2 Accounts | Works, but if one fails (challenge/lock), the system degrades to 50%. |
+| **Recommended** | **5+ Accounts** | **Optimal Stability**. Allows wide rotation and account "rest" periods. |
+| **Unlimited** | N Accounts | The system supports as many accounts as you add to `.env`. |
 
-### 2. Configuración de Entorno
+### 2. Environment Setup
 
 ```bash
-# Copia el template
+# Copy the template
 cp .env.example .env
 
-# EDITA EL .env (Vital)
-# Agrega tus cuentas en formato: USER:PASS
-IG_ACCOUNT_1=mi_bot_1:password123
-IG_ACCOUNT_2=mi_bot_2:password123
-IG_ACCOUNT_3=mi_bot_3:password123
-IG_ACCOUNT_4=mi_bot_4:password123
-IG_ACCOUNT_5=mi_bot_5:password123
+# EDIT the .env (Critical)
+# Add your accounts in format: USER:PASS
+IG_ACCOUNT_1=my_bot_1:password123
+IG_ACCOUNT_2=my_bot_2:password123
+IG_ACCOUNT_3=my_bot_3:password123
+IG_ACCOUNT_4=my_bot_4:password123
+IG_ACCOUNT_5=my_bot_5:password123
 ```
 
 ---
 
-## 🛠️ Flujos de Trabajo (Workflows)
+## 🛠️ Workflows
 
-Diferenciamos claramente entre **Desarrollo** (donde quieres VER qué pasa) y **Producción** (donde quieres rendimiento y silencio).
+We clearly differentiate between **Development** (where you want to SEE what happens) and **Production** (where you want performance and silence).
 
-### 🐛 Modo Desarrollo (Debugging Visual)
+### 🐛 Development Mode (Visual Debugging)
 
-En este modo, el navegador se abre visualmente (`headless: false`). Ves exactamente cómo el bot entra a Instagram, hace login y navega.
+In this mode, the browser opens visually (`headless: false`). You see exactly how the bot logs into Instagram and navigates.
 
-**Configuración en `.env`:**
+**Configuration in `.env`:**
 ```properties
 NODE_ENV=development
-HEADLESS=false       <-- CLAVE: Esto abre el navegador
-VERBOSE_LOGS=true    <-- CLAVE: Logs detallados en consola
+HEADLESS=false       <-- KEY: This opens the browser
+VERBOSE_LOGS=true    <-- KEY: Detailed console logs
 ```
 
-**Comando:**
+**Command:**
 ```bash
 yarn dev
 ```
-> El servidor iniciará en `http://localhost:3000`. Verás Chromium abrirse automáticamente.
+> The server will start at `http://localhost:3000`. You'll see Chromium open automatically.
 
 ---
 
-### 🚀 Modo Producción (Docker / Server)
+### 🚀 Production Mode (Docker / Server)
 
-Este es el modo "Fire & Forget". Todo corre en contenedores Docker, sin interfaz gráfica, optimizado para servidores Linux/Cloud. Las sesiones PERSISTEN aunque reinicies el contenedor.
+This is "Fire & Forget" mode. Everything runs in Docker containers, without GUI, optimized for Linux/Cloud servers. Sessions PERSIST even if you restart the container.
 
-**Configuración (Automática en Docker):**
-No necesitas tocar el `.env` para esto. El `docker compose.yml` fuerza:
+**Configuration (Automatic in Docker):**
+No need to touch `.env` for this. The `docker-compose.yml` forces:
 - `HEADLESS=true`
 - `NODE_ENV=production`
 
-**Comandos de Despliegue:**
+**Deployment Commands:**
 ```bash
-# 1. Levantar servicios (Build automático)
+# 1. Start services (Auto-build)
 docker compose up -d
 
-# 2. Ver logs en tiempo real (Vital para monitorear scraping)
+# 2. View real-time logs (Essential for monitoring scraping)
 docker compose logs -f
 
-# 3. Administración Básica
-docker compose down         # Detener todo
-docker compose restart      # Reiniciar servicios (rápido)
+# 3. Basic Administration
+docker compose down         # Stop everything
+docker compose restart      # Restart services (fast)
 ```
 
-### 🛠️ Comandos de Mantenimiento
+### 🛠️ Maintenance Commands
 
-**1. Recompilar (Si cambias código):**
+**1. Rebuild (If you change code):**
 ```bash
 docker compose up -d --build
 ```
 
-**2. Ver Logs (Vital para debugging):**
+**2. View Logs (Essential for debugging):**
 ```bash
 docker compose logs -f --tail 100
 ```
 
-**3. Reiniciar solo el Scraper:**
+**3. Restart only the Scraper:**
 ```bash
 docker compose restart instagram-post-scraper
 ```
 
-**4. Ver estado de contenedores:**
+**4. Check container status:**
 ```bash
 docker compose ps
 ```
 
-**5. Reconstruir TODO desde cero (Reset Completo):**
+**5. Rebuild EVERYTHING from scratch (Complete Reset):**
 ```bash
-# Detiene y elimina contenedores, redes y volúmenes
+# Stop and remove containers, networks, and volumes
 docker compose down -v
 
-# Elimina la imagen
+# Remove the image
 docker rmi instagram-post-scraper:latest
 
-# Limpia el caché de build de Docker
+# Clean Docker build cache
 docker builder prune -af
 
-# Reconstruye sin caché y levanta
+# Rebuild without cache and start
 docker compose build --no-cache && docker compose up -d
 ```
 
-> ⚠️ **Advertencia**: Esto eliminará todas las sesiones guardadas. Tendrás que volver a iniciar sesión en todas las cuentas de Instagram.
+> ⚠️ **Warning**: This will delete all saved sessions. You'll need to log in again on all Instagram accounts.
 
-> **Persistencia**: Los volúmenes de Docker aseguran que **NO** tengas que loguearte cada vez.
-> - `sessions/`: Guarda cookies/localStorage de cada bot.
-> - `data/`: Guarda estadísticas de rotación.
+> **Persistence**: Docker volumes ensure you **DON'T** have to log in every time.
+> - `sessions/`: Stores cookies/localStorage for each bot.
+> - `data/`: Stores rotation statistics.
 
 ---
 
-### 🌐 Docker Networking (Importante)
+### 🌐 Docker Networking (Important)
 
-Este proyecto usa **`network_mode: host`** en lugar de redes virtuales de Docker. Esto es **necesario** porque:
+This project uses **`network_mode: host`** instead of Docker virtual networks. This is **required** because:
 
-1. **Chromium requiere acceso real a internet** para conectarse a Instagram
-2. Las redes bridge de Docker pueden bloquear la conectividad externa del navegador
-3. Simplifica la comunicación desde otros contenedores
+1. **Chromium requires real internet access** to connect to Instagram
+2. Docker bridge networks can block external browser connectivity
+3. Simplifies communication from other containers
 
-**Cómo conectarse desde otros contenedores Docker:**
+**How to connect from other Docker containers:**
 
-| Desde | URL de conexión |
-|-------|-----------------|
-| Host (tu máquina) | `http://localhost:3000` |
-| Otro contenedor (Linux) | `http://172.17.0.1:3000` o `http://<IP-HOST>:3000` |
-| Otro contenedor (Docker Desktop) | `http://host.docker.internal:3000` |
+| From | Connection URL |
+|------|----------------|
+| Host (your machine) | `http://localhost:3000` |
+| Another container (Linux) | `http://172.17.0.1:3000` or `http://<HOST-IP>:3000` |
+| Another container (Docker Desktop) | `http://host.docker.internal:3000` |
 
-**Ejemplo: Consumir desde otro docker-compose.yml:**
+**Example: Consume from another docker-compose.yml:**
 
 ```yaml
 services:
   my-service:
     image: my-app:latest
     environment:
-      # En Linux, usa la IP del gateway de Docker
+      # On Linux, use Docker's gateway IP
       - SCRAPER_API_URL=http://172.17.0.1:3000
-      # En Docker Desktop (Mac/Windows)
+      # On Docker Desktop (Mac/Windows)
       # - SCRAPER_API_URL=http://host.docker.internal:3000
 ```
 
-> **Nota**: Para obtener la IP correcta del host en Linux, ejecuta: `docker network inspect bridge | grep Gateway`
+> **Note**: To get the correct host IP on Linux, run: `docker network inspect bridge | grep Gateway`
 
 ---
 
-## 📡 Ejemplos de Consumo
+## 📡 Usage Examples
 
-### 1. Simple cURL (Test rápido)
+### 1. Simple cURL (Quick Test)
 
-Scrapear 5 posts de `@natgeo` usando una cuenta aleatoria disponible:
+Scrape posts from `@natgeo` using a random available account:
 
 ```bash
 curl -X POST http://localhost:3000/instagram-post-scraper \
@@ -174,10 +176,10 @@ curl -X POST http://localhost:3000/instagram-post-scraper \
   }'
 ```
 
-### 2. Typescript / Node.js (Integración)
+### 2. TypeScript / Node.js (Integration)
 
 ```typescript
-// Tu cliente API
+// Your API client
 async function getInstagramPosts(targetUsername: string) {
   try {
     const response = await fetch('http://localhost:3000/instagram-post-scraper', {
@@ -206,20 +208,20 @@ async function getInstagramPosts(targetUsername: string) {
       console.error('❌ Error in scraper:', data);
     }
   } catch (error) {
-    console.error('❌ Error de red:', error);
+    console.error('❌ Network error:', error);
   }
 }
 ```
 
-### 3. Modo Batch (Multi-Scrape Paralelo)
+### 3. Batch Mode (Parallel Multi-Scrape)
 
-**⚡ Nuevo: Procesamiento Simultáneo**
+**⚡ New: Simultaneous Processing**
 
-El modo batch ahora ejecuta todos los scrapes **en paralelo** usando múltiples pestañas en el mismo navegador. Esto significa:
-- Todos los perfiles se scrapean **simultáneamente** (no secuencialmente)
-- Usa la **misma cuenta de Instagram** para todo el batch
-- **Emulated Focus** habilitado en cada pestaña para evitar problemas de tabs inactivas
-- Máximo **5 perfiles** por batch
+Batch mode now executes all scrapes **in parallel** using multiple tabs in the same browser. This means:
+- All profiles are scraped **simultaneously** (not sequentially)
+- Uses the **same Instagram account** for the entire batch
+- **Emulated Focus** enabled on each tab to avoid inactive tab issues
+- Maximum **5 profiles** per batch
 
 ```bash
 curl -X POST http://localhost:3000/instagram-post-scraper \
@@ -229,11 +231,11 @@ curl -X POST http://localhost:3000/instagram-post-scraper \
   }'
 ```
 
-> **Nota**: El batch completo tarda aproximadamente lo que tarda el perfil más lento, no la suma de todos.
+> **Note**: The complete batch takes approximately as long as the slowest profile, not the sum of all.
 
-### 4. Filtrar por Fecha (`createdAt`)
+### 4. Filter by Date (`createdAt`)
                                 
-Puedes especificar una fecha para obtener solo los posts publicados DESPUÉS de ese timestamp UNIX.
+You can specify a date to get only posts published AFTER that UNIX timestamp.
                                 
 ```bash
 curl -X POST http://localhost:3000/instagram-post-scraper \
@@ -244,9 +246,9 @@ curl -X POST http://localhost:3000/instagram-post-scraper \
   }'
 ```
 
-### 4.1 Filtro por Fecha Individual (Modo Batch)
+### 4.1 Individual Date Filter (Batch Mode)
 
-En modo batch, usa `createdAtMap` para especificar un `createdAt` diferente para cada perfil:
+In batch mode, use `createdAtMap` to specify a different `createdAt` for each profile:
 
 ```bash
 curl -X POST http://localhost:3000/instagram-post-scraper \
@@ -261,17 +263,17 @@ curl -X POST http://localhost:3000/instagram-post-scraper \
   }'
 ```
 
-> **Nota**: `createdAtMap` tiene precedencia sobre `createdAt` global. Si un perfil no está en el mapa, usa el `createdAt` global.
+> **Note**: `createdAtMap` takes precedence over global `createdAt`. If a profile is not in the map, the global `createdAt` is used.
 
-### 5. Ver Estado de Cuentas (`GET /accounts/status`)
+### 5. Check Account Status (`GET /accounts/status`)
 
-Consulta el estado actual de todas las cuentas configuradas: si están activas, último éxito/fallo, y motivo del fallo.
+Query the current status of all configured accounts: whether they're active, last success/failure, and failure reason.
 
 ```bash
 curl http://localhost:3000/accounts/status
 ```
 
-**Respuesta:**
+**Response:**
 ```json
 {
   "totalAccounts": 3,
@@ -298,40 +300,40 @@ curl http://localhost:3000/accounts/status
 }
 ```
 
-> **Nota**: Una cuenta se marca como `inactiva` después de 3 fallos consecutivos. El sistema de reparación automática intentará restaurarla en segundo plano.
+> **Note**: An account is marked as `inactive` after 3 consecutive failures. The automatic repair system will attempt to restore it in the background.
 
 ---
 
-## 🏗️ Arquitectura del Proyecto
+## 🏗️ Project Architecture
 
 ```
-sn-instagram-scraper-api/
+instagram-post-scraper/
 ├── src/
 │   ├── modules/
-│   │   ├── accounts/   # 🧠 BRAIN: Gestiona la rotación y salud de cuentas
-│   │   └── scraper/    # 🤖 BODY: Controla Playwright y la extracción de datos
-├── sessions/           # 💾 MEMORY: Cookies y sesiones persistentes (GitIgnored)
-└── data/               # 📊 STATS: Historial de uso de cuentas
+│   │   ├── accounts/   # 🧠 BRAIN: Manages rotation and account health
+│   │   └── scraper/    # 🤖 BODY: Controls Playwright and data extraction
+├── sessions/           # 💾 MEMORY: Persistent cookies and sessions (GitIgnored)
+└── data/               # 📊 STATS: Account usage history
 ```
 
-### Cómo funciona la Rotación ("The Secret Sauce")
+### How Rotation Works ("The Secret Sauce")
 
-1. **Request Entrante**: Usuario pide scrapear `@leomessi`.
+1. **Incoming Request**: User asks to scrape `@leomessi`.
 2. **Account Manager**: 
-   - Mira tu pool de cuentas (ej. 5 bots).
-   - Filtra las que están "Healthy" (no bloqueadas recientemente).
-   - Selecciona la **Menos Usada** (Lowest Usage Score) o Round-Robin.
+   - Looks at your account pool (e.g., 5 bots).
+   - Filters those that are "Healthy" (not recently blocked).
+   - Selects the **Least Used** (Lowest Usage Score) or Round-Robin.
 3. **Session Check**:
-   - ¿Ya tiene cookies validas en disco? -> **Reutiliza** (Carga instantánea ⚡).
-   - ¿No tiene? -> **Login** (Solo la primera vez).
-4. **Scraping**: Navega, extrae JSON, cierra contexto.
-5. **Cool-down**: Libera el bot para la siguiente tarea.
+   - Has valid cookies on disk? -> **Reuse** (Instant load ⚡).
+   - Doesn't have them? -> **Login** (Only the first time).
+4. **Scraping**: Navigates, extracts JSON, closes context.
+5. **Cool-down**: Releases the bot for the next task.
 
 ---
 
-## 📦 Estructura de Datos (JSON Response)
+## 📦 Data Structure (JSON Response)
 
-Lo que obtienes al final:
+What you get at the end:
 
 ```json
 {
@@ -344,21 +346,21 @@ Lo que obtienes al final:
       "success": true,
       "username": "natgeo",
       "postsCount": 1,
-      "scrapedWith": "mi_bot_3",
+      "scrapedWith": "my_bot_3",
       "scrapedAt": 1765159000,
       "posts": [
         {
           "id": "3123456789",
           "shortcode": "CzJ8...",
           "type": "feed",
-          "text": "Caption del post...",
+          "text": "Post caption...",
           "likes": 15400,
           "comments": 230,
           "createdAt": 1765158474,
           "media": [
             {
               "type": "image",
-              "url": "https://instagram.fna... (URL Temporal de CDN)",
+              "url": "https://instagram.fna... (Temporary CDN URL)",
               "width": 1080,
               "height": 1080
             }
@@ -373,25 +375,25 @@ Lo que obtienes al final:
 
 ---
 
-## 🚨 Troubleshooting Común
+## 🚨 Common Troubleshooting
 
 **Q: Error `listen EADDRINUSE: address already in use :::3000`**  
-A: Otro proceso (probablemente una instancia zombie de node) está usando el puerto.
-Solución: `kill -9 $(lsof -t -i:3000)`
+A: Another process (probably a zombie node instance) is using the port.
+Solution: `kill -9 $(lsof -t -i:3000)`
 
-**Q: Mis cuentas se bloquean (Challenge Required)**  
-A: Estás scrapeando demasiado rápido con muy pocas cuentas.
-Solución:
-1. Agrega más cuentas al `.env`.
-2. Aumenta el delay entre requests.
-3. Docker reinicia automáticamente las sesiones malas, pero necesitas "calma" en los requests.
+**Q: My accounts get blocked (Challenge Required)**  
+A: You're scraping too fast with too few accounts.
+Solution:
+1. Add more accounts to `.env`.
+2. Increase delay between requests.
+3. Docker automatically restarts bad sessions, but you need "calm" in requests.
 
-**Q: No veo el navegador en `yarn dev`**  
-A: Revisa que `HEADLESS=false` esté seteado en tu `.env`.
+**Q: I don't see the browser in `yarn dev`**  
+A: Check that `HEADLESS=false` is set in your `.env`.
 
-**Q: Error `net::ERR_INTERNET_DISCONNECTED` en Docker**  
-A: Chromium dentro del contenedor no puede acceder a internet.  
-Solución: Asegúrate de usar `network_mode: host` en tu `docker-compose.yml`. Las redes bridge de Docker pueden bloquear la conectividad del navegador.
+**Q: Error `net::ERR_INTERNET_DISCONNECTED` in Docker**  
+A: Chromium inside the container can't access the internet.  
+Solution: Make sure to use `network_mode: host` in your `docker-compose.yml`. Docker bridge networks can block browser connectivity.
 
 ---
 **Happy Scraping!** 🕷️

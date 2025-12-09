@@ -65,11 +65,8 @@ COPY --from=builder /app/dist ./dist
 # Create directories for data and sessions
 RUN mkdir -p /app/data /app/sessions
 
-# Set proper permissions
-RUN chown -R node:node /app
-
-# Switch to non-root user
-USER node
+# Note: We run as root inside the container because mounted volumes
+# may have different ownership on the host. Docker isolation provides security.
 
 # Expose port
 EXPOSE 3000

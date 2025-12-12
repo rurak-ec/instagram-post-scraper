@@ -22,15 +22,69 @@ export class BrowserService implements OnModuleDestroy {
   private browserInstances: Map<string, BrowserInstance> = new Map();
   private launchingInstances: Map<string, Promise<BrowserInstance>> = new Map();
   private headless: boolean;
+  private cleanupInterval: NodeJS.Timeout | null = null;
 
   constructor(private configService: ConfigService) {
     this.headless = this.configService.get<boolean>('headless', true);
+
+    // Start periodic cleanup of zombie processes every 5 minutes
+    this.startPeriodicCleanup();
+  }
+
+  /**
+   * Start periodic cleanup of zombie Chromium processes
+   */
+  private startPeriodicCleanup() {
+    // Run cleanup every 5 minutes
+    this.cleanupInterval = setInterval(async () => {
+      await this.cleanupZombieProcesses();
+    }, 5 * 60 * 1000);
+
+    this.logger.log('🧹 Started periodic cleanup of zombie processes (every 5 minutes)');
+  }
+
+  /**
+   * Cleanup zombie Chromium processes
+   */
+  private async cleanupZombieProcesses() {
+    try {
+      const { exec } = require('child_process');
+      const util = require('util');
+      const execPromise = util.promisify(exec);
+
+      // Kill zombie chromium processes (defunct or consuming too much memory)
+      const { stdout } = await execPromise(
+        'ps aux | grep -E "chromium|chrome" | grep -v grep | awk \'{if($8=="Z" || $4>10) print $2}\'',
+      );
+
+      if (stdout.trim()) {
+        const pids = stdout.trim().split('\n');
+        this.logger.warn(`🧹 Found ${pids.length} zombie/high-memory Chromium processes. Cleaning up...`);
+
+        for (const pid of pids) {
+          try {
+            await execPromise(`kill -9 ${pid}`);
+            this.logger.log(`✅ Killed process ${pid}`);
+          } catch (err) {
+            // Process may have already exited
+          }
+        }
+      }
+    } catch (error) {
+      // Silently ignore errors (cleanup is best-effort)
+    }
   }
 
   /**
    * Cleanup on module destroy
    */
   async onModuleDestroy() {
+    // Stop cleanup interval
+    if (this.cleanupInterval) {
+      clearInterval(this.cleanupInterval);
+      this.cleanupInterval = null;
+    }
+
     this.logger.log('🔄 Closing all browser instances...');
     const closePromises = Array.from(this.browserInstances.values()).map(
       async (instance) => {
@@ -44,6 +98,9 @@ export class BrowserService implements OnModuleDestroy {
     await Promise.all(closePromises);
     this.browserInstances.clear();
     this.logger.log('✅ All browser instances closed');
+
+    // Final cleanup of any remaining processes
+    await this.cleanupZombieProcesses();
   }
 
   /**

@@ -1,6 +1,6 @@
 import { Injectable, Logger, HttpException, HttpStatus, OnModuleInit } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { Page } from 'playwright';
+import { Page, Response } from 'playwright';
 import { AccountsService } from '../accounts/accounts.service';
 import { BrowserService } from './browser.service';
 import {
@@ -273,39 +273,62 @@ export class InstagramScraperService implements OnModuleInit {
     scrapedAt: number;
     error?: string;
   }>> {
-    this.logger.log(`🔄 Bot ${account.username} processing ${usernames.length} profiles SIMULTANEOUSLY...`);
+    // LIMIT CONCURRENCY: Process in batches of 2 to prevent resource exhaustion
+    const CONCURRENCY_LIMIT = 2;
+    this.logger.log(`🔄 Bot ${account.username} processing ${usernames.length} profiles (max ${CONCURRENCY_LIMIT} concurrent)...`);
 
     const sessionDir = this.accountsService.getAccountSessionDir(account);
-    
+
     // Get or create the shared browser context for this account
     const { context } = await this.browserService.getBrowserForSession(sessionDir);
 
-    // Process all profiles in parallel using Promise.all
-    const scrapePromises = usernames.map(async (username, index) => {
-      this.logger.log(`📍 [${index + 1}/${usernames.length}] Starting parallel scrape for @${username} with bot ${account.username}`);
-      const profileStartTime = Date.now();
+    const results: Array<{
+      success: boolean;
+      username: string;
+      posts: CleanedInstagramPost[];
+      scrapedWith: string;
+      scrapedAt: number;
+      error?: string;
+    }> = [];
 
-      try {
-        // Use per-profile createdAt from map, or fall back to global createdAt
-        const profileCreatedAt = createdAtMap?.[username] ?? createdAt;
-        const result = await this.executeScrapeWithContext(context, account, username, profileStartTime, maxPosts, profileCreatedAt);
-        return result;
+    // Process in controlled batches
+    for (let i = 0; i < usernames.length; i += CONCURRENCY_LIMIT) {
+      const batch = usernames.slice(i, i + CONCURRENCY_LIMIT);
+      this.logger.log(`📦 Processing batch ${Math.floor(i / CONCURRENCY_LIMIT) + 1}/${Math.ceil(usernames.length / CONCURRENCY_LIMIT)}: ${batch.join(', ')}`);
 
-      } catch (error) {
-        this.logger.error(`❌ Failed to scrape @${username}: ${error.message}`);
-        return {
-          success: false,
-          username,
-          posts: [] as CleanedInstagramPost[],
-          scrapedWith: account.username,
-          scrapedAt: Math.floor(Date.now() / 1000),
-          error: error.message,
-        };
+      const scrapePromises = batch.map(async (username, index) => {
+        const absoluteIndex = i + index;
+        this.logger.log(`📍 [${absoluteIndex + 1}/${usernames.length}] Starting scrape for @${username} with bot ${account.username}`);
+        const profileStartTime = Date.now();
+
+        try {
+          // Use per-profile createdAt from map, or fall back to global createdAt
+          const profileCreatedAt = createdAtMap?.[username] ?? createdAt;
+          const result = await this.executeScrapeWithContext(context, account, username, profileStartTime, maxPosts, profileCreatedAt);
+          return result;
+
+        } catch (error) {
+          this.logger.error(`❌ Failed to scrape @${username}: ${error.message}`);
+          return {
+            success: false,
+            username,
+            posts: [] as CleanedInstagramPost[],
+            scrapedWith: account.username,
+            scrapedAt: Math.floor(Date.now() / 1000),
+            error: error.message,
+          };
+        }
+      });
+
+      // Wait for current batch to complete before moving to next batch
+      const batchResults = await Promise.all(scrapePromises);
+      results.push(...batchResults);
+
+      // Small delay between batches to avoid rate limiting
+      if (i + CONCURRENCY_LIMIT < usernames.length) {
+        await humanDelay(1000, 2000);
       }
-    });
-
-    // Wait for all parallel scrapes to complete
-    const results = await Promise.all(scrapePromises);
+    }
 
     // Update account status based on results
     const allFailed = results.every(r => !r.success);
@@ -317,7 +340,15 @@ export class InstagramScraperService implements OnModuleInit {
       this.accountsService.updateAccountStatus(account.username, true);
     }
 
-    this.logger.log(`✅ Parallel batch complete: ${results.filter(r => r.success).length}/${usernames.length} successful`);
+    this.logger.log(`✅ Batch complete: ${results.filter(r => r.success).length}/${usernames.length} successful`);
+
+    // CRITICAL: Close browser context after batch to free resources
+    try {
+      await this.browserService.closeBrowserForSession(sessionDir);
+      this.logger.log(`🔒 Closed browser context for ${account.username} to free resources`);
+    } catch (err) {
+      this.logger.warn(`Failed to close browser context: ${err.message}`);
+    }
 
     return results;
   }
@@ -341,6 +372,9 @@ export class InstagramScraperService implements OnModuleInit {
       throw new Error(`Failed to create page for @${targetUsername}`);
     }
 
+    // Track CDP session for cleanup
+    let cdpSession: any = null;
+
     try {
 
       // Set realistic user agent and headers
@@ -354,7 +388,7 @@ export class InstagramScraperService implements OnModuleInit {
 
       // Setup CDP session with emulated focus for this new page
       try {
-        const cdpSession = await context.newCDPSession(page);
+        cdpSession = await context.newCDPSession(page);
         await cdpSession.send('Emulation.setFocusEmulationEnabled', {
           enabled: true,
         });
@@ -431,6 +465,15 @@ export class InstagramScraperService implements OnModuleInit {
       // Propagate error to trigger fallback
       throw error;
     } finally {
+      // Cleanup CDP session first
+      if (cdpSession) {
+        try {
+          await cdpSession.detach();
+        } catch (err) {
+          this.logger.warn(`Failed to detach CDP session: ${err.message}`);
+        }
+      }
+
       // Ensure page is closed
       await this.browserService.closePage(page);
     }
@@ -710,7 +753,8 @@ export class InstagramScraperService implements OnModuleInit {
     // Listen for GraphQL responses BEFORE any navigation
     const graphqlResponses: InstagramGraphQLResponse[] = [];
 
-    page.on('response', async (response) => {
+    // Create named handler function so we can remove it later
+    const responseHandler = async (response: Response) => {
       const url = response.url();
       // Capture all Instagram GraphQL responses
       if (url.includes('graphql/query')) {
@@ -718,7 +762,7 @@ export class InstagramScraperService implements OnModuleInit {
           const data = await response.json();
           const dataKeys = data.data ? Object.keys(data.data) : [];
           this.logger.debug(`📊 Intercepted: ${url.substring(0, 80)} | keys: ${dataKeys.join(', ') || Object.keys(data).join(', ')}`);
-          
+
           // Only capture responses with timeline data
           if (data.data?.xdt_api__v1__feed__user_timeline_graphql_connection?.edges) {
             graphqlResponses.push(data);
@@ -728,7 +772,9 @@ export class InstagramScraperService implements OnModuleInit {
           // Ignore parsing errors
         }
       }
-    });
+    };
+
+    page.on('response', responseHandler);
 
     // Reload the page to capture the initial GraphQL response with the listener active
     this.logger.log(`🔄 Reloading profile page to capture GraphQL response...`);
@@ -793,6 +839,9 @@ export class InstagramScraperService implements OnModuleInit {
     } else if (posts.length === 0) {
       this.logger.log(`📭 [${username}] GraphQL captured but 0 posts found - profile may have no posts or all posts filtered`);
     }
+
+    // CRITICAL: Remove event listener to prevent memory leak
+    page.off('response', responseHandler);
 
     // Apply limit AFTER sorting (so we get the newest posts, not oldest pinned posts)
     return { posts: posts.slice(0, limit), graphqlCaptured };

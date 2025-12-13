@@ -35,10 +35,11 @@ RUN corepack enable
 
 WORKDIR /app
 
-# Install Chromium and dependencies
+# Install Chromium, tini (for zombie process reaping), and dependencies
 RUN apt-get update && apt-get install -y \
   chromium \
   chromium-driver \
+  tini \
   fonts-ipafont-gothic \
   fonts-wqy-zenhei \
   fonts-thai-tlwg \
@@ -74,6 +75,9 @@ EXPOSE 3000
 # Health check
 HEALTHCHECK --interval=30s --timeout=10s --start-period=40s --retries=3 \
   CMD node -e "require('http').get('http://localhost:3000/health', (r) => {process.exit(r.statusCode === 200 ? 0 : 1)})"
+
+# Use tini as init to handle zombie process reaping
+ENTRYPOINT ["/usr/bin/tini", "--"]
 
 # Start application
 CMD ["node", "dist/main"]

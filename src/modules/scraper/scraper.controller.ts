@@ -55,7 +55,7 @@ export class ScraperController {
     if (hasMultipleUsernames) {
       const batchResult = await this.scraperService.scrapeProfiles(
         scrapeRequest.usernames!,
-        undefined, // Use default limit
+        scrapeRequest.maxPosts,
         scrapeRequest.createdAt,
         scrapeRequest.createdAtMap,
       );
@@ -92,7 +92,7 @@ export class ScraperController {
     // Single mode: single username
     const result = await this.scraperService.scrapeProfile(
       scrapeRequest.username!,
-      undefined, // Use default limit
+      scrapeRequest.maxPosts,
       scrapeRequest.createdAt,
     );
 

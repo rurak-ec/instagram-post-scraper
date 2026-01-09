@@ -214,7 +214,22 @@ curl -X POST http://localhost:3000/instagram-post-scraper \
   }'
 ```
 
-### 2. TypeScript / Node.js (Integration)
+### 2. Control Maximum Posts (`maxPosts`)
+
+Specify how many posts to load. The API will scroll progressively until reaching the limit:
+
+```bash
+curl -X POST http://localhost:3000/instagram-post-scraper \
+  -H "Content-Type: application/json" \
+  -d '{
+    "username": "natgeo",
+    "maxPosts": 30
+  }'
+```
+
+> **Note**: If `maxPosts` is not provided, the default from `MAX_POSTS_PER_REQUEST` in `.env` is used (default: 12).
+
+### 3. TypeScript / Node.js (Integration)
 
 ```typescript
 // Your API client
@@ -256,7 +271,7 @@ async function getInstagramPosts(targetUsername: string) {
 }
 ```
 
-### 3. Batch Mode (Parallel Multi-Scrape)
+### 4. Batch Mode (Parallel Multi-Scrape)
 
 **⚡ New: Simultaneous Processing**
 
@@ -277,7 +292,7 @@ curl -X POST http://localhost:3000/instagram-post-scraper \
 
 > **Note**: The complete batch takes approximately as long as the slowest profile, not the sum of all.
 
-### 4. Filter by Date (`createdAt`)
+### 5. Filter by Date (`createdAt`)
 
 You can specify a date to get only posts published AFTER that UNIX timestamp.
 
@@ -290,7 +305,7 @@ curl -X POST http://localhost:3000/instagram-post-scraper \
   }'
 ```
 
-### 4.1 Individual Date Filter (Batch Mode)
+### 5.1 Individual Date Filter (Batch Mode)
 
 In batch mode, use `createdAtMap` to specify a different `createdAt` for each profile:
 
@@ -309,7 +324,7 @@ curl -X POST http://localhost:3000/instagram-post-scraper \
 
 > **Note**: `createdAtMap` takes precedence over global `createdAt`. If a profile is not in the map, the global `createdAt` is used.
 
-### 5. Check Account Status (`GET /accounts/status`)
+### 6. Check Account Status (`GET /accounts/status`)
 
 Query the current status of all configured accounts: whether they're active, last success/failure, and failure reason.
 

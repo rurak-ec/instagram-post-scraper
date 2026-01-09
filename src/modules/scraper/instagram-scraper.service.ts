@@ -781,20 +781,49 @@ export class InstagramScraperService implements OnModuleInit {
     await page.reload({ waitUntil: 'domcontentloaded' });
     await humanDelay(3000, 4000); // Wait for GraphQL response
 
-    // Scroll to trigger more posts if needed
-    for (let i = 0; i < 4; i++) {
-      await page.mouse.wheel(0, randomDelay(500, 1000));
-      await humanDelay(1000, 2000);
+    // Progressive scroll to load more posts until limit is reached
+    // No max limit - keeps scrolling until target reached or feed ends
+    let scrollAttempts = 0;
+    let lastPostCount = 0;
+    let noNewPostsCount = 0;
+    const STALE_SCROLL_THRESHOLD = 5; // Stop after 5 consecutive scrolls with no new posts
 
+    this.logger.log(`📊 Target: ${limit} posts. Starting progressive scroll...`);
+
+    while (true) {
+      // Count current unique posts from all captured GraphQL responses
+      const currentPostCount = graphqlResponses.reduce((sum, r) => 
+        sum + (r.data?.xdt_api__v1__feed__user_timeline_graphql_connection?.edges?.length || 0), 0);
+      
       // Stop if we have enough posts
-      if (graphqlResponses.length > 0) {
-        const totalPosts = graphqlResponses.reduce((sum, r) => 
-          sum + (r.data?.xdt_api__v1__feed__user_timeline_graphql_connection?.edges?.length || 0), 0);
-        if (totalPosts >= limit) break;
+      if (currentPostCount >= limit) {
+        this.logger.log(`✅ Reached post limit: ${currentPostCount}/${limit}`);
+        break;
       }
+      
+      // Check if we're getting new posts
+      if (currentPostCount === lastPostCount) {
+        noNewPostsCount++;
+        // Stop if no new posts after 5 consecutive scrolls (end of feed)
+        if (noNewPostsCount >= STALE_SCROLL_THRESHOLD) {
+          this.logger.log(`📭 No more posts available (${currentPostCount} total after ${scrollAttempts} scrolls, ${STALE_SCROLL_THRESHOLD} stale)`);
+          break;
+        }
+      } else {
+        noNewPostsCount = 0;
+        this.logger.log(`📊 Scroll ${scrollAttempts + 1}: ${currentPostCount} posts loaded...`);
+      }
+      
+      lastPostCount = currentPostCount;
+      
+      // Scroll down to trigger loading more posts
+      await page.mouse.wheel(0, randomDelay(800, 1200));
+      await humanDelay(1500, 2500);
+      
+      scrollAttempts++;
     }
 
-    // Wait a bit for any pending responses
+    // Final wait for any pending responses
     await humanDelay(2000, 3000);
 
     // Process GraphQL responses - only use xdt_api__v1__feed__user_timeline_graphql_connection

@@ -42,4 +42,12 @@ export class ScrapeRequestDto {
   @IsOptional()
   @IsObject()
   createdAtMap?: Record<string, number>;
+
+  @ApiPropertyOptional({
+    description: 'Maximum number of posts to extract. If not provided, uses MAX_POSTS_PER_REQUEST from .env (default: 12). The API will scroll progressively to load more posts until reaching this limit.',
+    example: 24,
+  })
+  @IsOptional()
+  @IsInt()
+  maxPosts?: number;
 }

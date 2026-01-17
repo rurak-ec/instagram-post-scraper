@@ -228,7 +228,7 @@ async function getInstagramPosts(targetUsername: string) {
         body: JSON.stringify({
           username: targetUsername,
         }),
-      }
+      },
     );
 
     const data = await response.json();
@@ -242,7 +242,7 @@ async function getInstagramPosts(targetUsername: string) {
           console.log(`📦 Posts: ${result.postsCount}`);
         } else {
           console.error(
-            `❌ Profile ${result.username} failed: ${result.error}`
+            `❌ Profile ${result.username} failed: ${result.error}`,
           );
         }
       });

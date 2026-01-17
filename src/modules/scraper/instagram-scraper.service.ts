@@ -47,7 +47,10 @@ export class InstagramScraperService implements OnModuleInit {
     // User requested "verifique... y tenerlas listas" -> await seems appropriate,
     // but preventing app from listening might be annoying if it takes too long.
     // However, for "reporte en vivo" before app is "ready", await is better.
-    await this.verifyAllSessions();
+    // Run verification in background to not block app startup completely
+    this.verifyAllSessions().catch(err => 
+      this.logger.error(`❌ Background verification failed: ${err.message}`)
+    );
   }
 
   /**

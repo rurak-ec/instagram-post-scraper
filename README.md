@@ -70,18 +70,18 @@ IG_ACCOUNT_5=my_bot_5:password123
 > **When do you need a proxy?**
 >
 > - **Local Development (No Proxy)**: ❌ Leave `IG_PROXY_1` empty → Uses your direct internet.
-> - **Local Testing (With Proxy)**: ✅ Configure `IG_PROXY_1` in `.env` → Test your proxy before deploying.
-> - **Production (Fly.io, AWS, etc)**: ✅ **REQUIRED**. Cloud servers are blocked by Instagram instantly.
+> - **Testing (With Proxy)**: ✅ Configure `IG_PROXY_1` in `.env` → Test your proxy before deploying.
+> - **Production (Cloud/VPS)**: ✅ **REQUIRED**. Cloud servers are blocked by Instagram instantly.
 
-Instagram aggressively blocks IPs from data centers (AWS, Google Cloud, Fly.io, etc.). If you deploy to production **without a residential proxy**, you will receive `ERR_HTTP_RESPONSE_CODE_FAILURE` errors immediately.
+Instagram aggressively blocks IPs from data centers (AWS, Google Cloud, DigitalOcean, etc.). If you deploy to production **without a residential proxy**, you will receive `ERR_HTTP_RESPONSE_CODE_FAILURE` errors immediately.
 
 #### Option A: Local Proxy Testing (yarn dev)
 
 **Step 1:** Edit your local `.env`:
 
 ```bash
-# Uncomment and configure with your real IPRoyal credentials
-IG_PROXY_1=http://abc123:xyz789@geo.iproyal.com:12321
+# Uncomment and configure with your real credentials
+IG_PROXY_1=http://user:pass@geo.provider.com:12321
 ```
 
 **Step 2:** Run the server:
@@ -93,20 +93,21 @@ yarn dev
 **Step 3:** verify logs:
 
 ```
-🌐 Using Proxy: http://***@geo.iproyal.com:12321
+🌐 Using Proxy: http://***@geo.provider.com:12321
 ```
 
 This allows you to **prove the proxy works** before deploying.
 
-#### Option B: Production (Fly.io) - Recommended
+#### Option B: Production (Recommended)
 
-**Do NOT put the proxy in `.env`**. Use secrets:
+**Do NOT put the proxy in `.env`**. Use **Secrets** or **Environment Variables** provided by your Cloud Platform (AWS Secrets Manager, GitHub Secrets, etc.):
 
 ```bash
-fly secrets set IG_PROXY_1="http://user:pass@geo.iproyal.com:12321"
+# Example: Set environment variable on your server
+IG_PROXY_1="http://user:pass@geo.provider.com:12321"
 ```
 
-Fly.io injects the secret automatically into `process.env.IG_PROXY_1`.
+The code naturally reads `process.env.IG_PROXY_1`.
 
 **Recommended Providers:**
 | Provider | Type | Approx Price | URL |

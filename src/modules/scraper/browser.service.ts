@@ -129,13 +129,77 @@ export class BrowserService implements OnModuleDestroy {
     // Inject anti-detection scripts
     await this.injectAntiDetectionScripts(page);
 
-    // Optimize bandwidth: Block images, media, and fonts
+    // Optimize bandwidth: Aggressive blocking
+    const bytesByType = new Map<string, number>();
+    
     await page.route('**/*', (route) => {
-      const resourceType = route.request().resourceType();
-      if (['image', 'media', 'font'].includes(resourceType)) {
+      const request = route.request();
+      const resourceType = request.resourceType();
+      const url = request.url();
+
+      // 1. Block heavy resource types
+      if (['image', 'media', 'font', 'stylesheet'].includes(resourceType)) {
         return route.abort();
       }
+
+      // 2. Block "other" resources (often beacons, tracking, prefetch)
+      // Be careful: sometimes 'other' includes essential JSON. 
+      // Safe strategy: Block specific patterns.
+      if (resourceType === 'other' && (url.includes('logging') || url.includes('analytics'))) {
+         return route.abort();
+      }
+
+      // 3. Block known tracking/marketing domains
+      if (
+        url.includes('facebook.com/tr/') || // FB Pixel
+        url.includes('google-analytics') ||
+        url.includes('googletagmanager') ||
+        url.includes('/logging_client_events') // IG Logging
+      ) {
+        return route.abort();
+      }
+
       return route.continue();
+    });
+
+    // Measure bandwidth detailed with URL logging for heavy assets
+    page.on('response', (response) => {
+      try {
+        const headers = response.headers();
+        const length = parseInt(headers['content-length'] || '0', 10);
+        const request = response.request();
+        const type = request.resourceType();
+        const url = request.url();
+        
+        const current = bytesByType.get(type) || 0;
+        bytesByType.set(type, current + length);
+
+        // Log heavy assets to identify candidates for blocking
+        // Threshold: 50KB
+        if (length > 50 * 1024) {
+             this.logger.debug(`📦 Heavy Asset [${type}]: ${(length/1024).toFixed(2)}KB - ${url.substring(0, 100)}...`);
+        }
+
+      } catch (e) {
+        // Ignore errors calculating size
+      }
+    });
+
+    // Log detailed bandwidth on close
+    page.on('close', () => {
+      let totalBytes = 0;
+      const breakdown: string[] = [];
+
+      bytesByType.forEach((bytes, type) => {
+        totalBytes += bytes;
+        const mb = (bytes / 1024 / 1024).toFixed(2);
+        breakdown.push(`${type}: ${mb} MB`);
+      });
+
+      const totalMb = (totalBytes / 1024 / 1024).toFixed(2);
+      this.logger.log(`📊 Bandwidth Breakdown for ${targetUrl}:`);
+      this.logger.log(`   Total: ${totalMb} MB`);
+      this.logger.log(`   Details: ${breakdown.join(', ')}`);
     });
 
     // Setup CDP session
@@ -199,15 +263,32 @@ export class BrowserService implements OnModuleDestroy {
     // Add arguments to suppress profile errors and improve stability
     if (!launchOptions.args) launchOptions.args = [];
     
-    // Proxy Configuration (Critical for Fly.io)
+    // Proxy Configuration
+    const enableProxy = process.env.ENABLE_PROXY === 'true';
     const proxyUrl = process.env.IG_PROXY_1;
-    if (proxyUrl) {
-      this.logger.log(`🌐 Using Proxy: ${proxyUrl.replace(/:[^:]*@/, ':***@')}`); // Log masked URL
-      launchOptions.proxy = {
-        server: proxyUrl,
-      };
+
+    if (enableProxy && proxyUrl) {
+      try {
+        const url = new URL(proxyUrl);
+        this.logger.log(`🌐 Using Proxy: ${url.protocol}//${url.host} (User: ${url.username})`);
+        
+        launchOptions.proxy = {
+          server: `${url.protocol}//${url.host}`,
+          username: url.username,
+          password: url.password,
+        };
+      } catch (e) {
+        this.logger.error(`❌ Invalid Proxy URL format: ${e.message}`);
+        // Fallback or throw? better to warn and try direct if malformed, or throw.
+        // For now, let's throw to be loud.
+         this.logger.warn('⚠️ Malformed Proxy URL. Ignoring.');
+      }
     } else {
-       this.logger.warn('⚠️ No Proxy configured. Running with direct connection (Risky on Fly.io)');
+       if (!enableProxy) {
+         this.logger.log('🚫 Proxy disabled via ENABLE_PROXY=false. Using direct connection.');
+       } else {
+         this.logger.warn('⚠️ ENABLE_PROXY is true but IG_PROXY_1 is missing. Using direct connection (Risk of IP ban).');
+       }
     }
 
     launchOptions.args.push(

@@ -68,6 +68,10 @@ export function resolveGoogleChromePath(): string {
  * Configuración optimizada del navegador con stealth
  * Usa Chromium en todos los entornos
  */
+/**
+ * Configuración optimizada del navegador con stealth
+ * Usa Chromium en todos los entornos
+ */
 export function getBrowserLaunchOptions(headless: boolean) {
   const viewport = getRandomViewport();
 
@@ -86,7 +90,7 @@ export function getBrowserLaunchOptions(headless: boolean) {
       '--disable-setuid-sandbox',
       '--disable-blink-features=AutomationControlled',
       '--disable-dev-shm-usage',
-      '--disable-software-rasterizer', // Add this to prevent GPU crashes
+      '--disable-software-rasterizer',
 
       // Performance optimizations
       '--disable-accelerated-2d-canvas',
@@ -124,6 +128,7 @@ export function getBrowserLaunchOptions(headless: boolean) {
     deviceScaleFactor: 1,
     isMobile: false,
     hasTouch: false,
+    proxy: undefined as { server: string; username?: string; password?: string } | undefined,
   };
 }
 

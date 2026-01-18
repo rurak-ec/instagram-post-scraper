@@ -64,6 +64,60 @@ IG_ACCOUNT_4=mi_bot_4:password123
 IG_ACCOUNT_5=mi_bot_5:password123
 ```
 
+### 3. Configuración de Proxy
+
+> [!IMPORTANT]
+> **¿Cuándo necesitas un proxy?**
+>
+> - **Local Development (sin proxy)**: ❌ Deja `IG_PROXY_1` vacío → Usa tu internet directo.
+> - **Local Testing (con proxy)**: ✅ Configura `IG_PROXY_1` en `.env` → Prueba tu proxy antes de deploy.
+> - **Producción (Fly.io, AWS, etc)**: ✅ **REQUERIDO con secrets** → Evita bloqueo de IP.
+
+Instagram bloquea agresivamente las IPs de datacenters (AWS, Google Cloud, Fly.io, etc). Si despliegas en producción **sin proxy residencial**, recibirás errores `ERR_HTTP_RESPONSE_CODE_FAILURE` inmediatamente.
+
+#### Opción A: Testing Local del Proxy (yarn dev)
+
+**Paso 1:** Edita tu `.env` local:
+
+```bash
+# Descomenta y configura con tus credenciales de IPRoyal
+IG_PROXY_1=http://abc123:xyz789@geo.iproyal.com:12321
+```
+
+**Paso 2:** Ejecuta el servidor:
+
+```bash
+yarn dev
+```
+
+**Paso 3:** Verifica en los logs:
+
+```
+🌐 Using Proxy: http://***@geo.iproyal.com:12321
+```
+
+Esto te permite **probar que el proxy funciona** antes de hacer deploy a producción.
+
+#### Opción B: Producción en Fly.io (Recomendado)
+
+**NO pongas el proxy en `.env`**. Usa secrets:
+
+```bash
+fly secrets set IG_PROXY_1="http://usuario:password@geo.iproyal.com:12321"
+```
+
+Fly.io inyecta el secreto automáticamente en `process.env.IG_PROXY_1`.
+
+**Proveedores Recomendados:**
+| Proveedor | Tipo | Precio Aprox | URL |
+|-----------|------|--------------|-----|
+| **IPRoyal** | Residencial Pay-as-you-go | ~$7/GB | [iproyal.com](https://iproyal.com) |
+| Bright Data | Residencial | ~$15/GB | [brightdata.com](https://brightdata.com) |
+| Smartproxy | Residencial | ~$10/GB | [smartproxy.com](https://smartproxy.com) |
+
+> [!TIP]
+> **Consumo de Datos con Optimización**: Este proyecto bloquea imágenes/videos/fuentes automáticamente. Con esto, cada scrape consume ~300-500KB. Con 1GB de IPRoyal puedes hacer ~2,000-3,000 scrapes.
+
 ---
 
 ## 🛠️ Flujos de Trabajo (Workflows)

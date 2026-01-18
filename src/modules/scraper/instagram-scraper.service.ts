@@ -712,19 +712,36 @@ export class InstagramScraperService implements OnModuleInit {
     this.logger.log(`🔐 Performing login for: ${account.username}`);
 
     try {
-      // Wait for login form
-      await page.waitForSelector('input[name="username"]', { timeout: 5000 });
+      // Wait for login form (accepting both standard and alternative fields)
+      await page.waitForSelector('input[name="username"], input[name="email"]', { timeout: 10000 });
 
-      // Fill username
-      await page.fill('input[name="username"]', account.username);
+      // Check for username field (standard or alternative)
+      const usernameSelector = await page.isVisible('input[name="username"]') 
+        ? 'input[name="username"]' 
+        : 'input[name="email"]'; // Fallback for some login forms
+
+      await page.fill(usernameSelector, account.username);
       await humanDelay(600, 1500);
 
-      // Fill password
-      await page.fill('input[name="password"]', account.password);
+      // Check for password field (standard or alternative)
+      const passwordSelector = await page.isVisible('input[name="password"]')
+        ? 'input[name="password"]'
+        : 'input[name="pass"]'; // Fallback for some login forms
+
+      await page.fill(passwordSelector, account.password);
       await humanDelay(1000, 2500);
 
-      // Click login button
-      await page.click('button[type="submit"]');
+      // Click login button (handle standard button or div-based button)
+      const loginButtonSelector = 'button[type="submit"]';
+      if (await page.isVisible(loginButtonSelector)) {
+        await page.click(loginButtonSelector);
+      } else {
+        // Fallback for div-based buttons (Facebook style / new Instagram login)
+        // Look for text "Log in" or "Iniciar sesión"
+        const loginTextSelector = 'div[role="button"]:has-text("Iniciar sesión"), div[role="button"]:has-text("Log in")';
+        await page.waitForSelector(loginTextSelector, { timeout: 5000 });
+        await page.click(loginTextSelector);
+      }
 
       // Wait for navigation
       await page.waitForFunction(

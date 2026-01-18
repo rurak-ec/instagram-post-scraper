@@ -64,6 +64,60 @@ IG_ACCOUNT_4=my_bot_4:password123
 IG_ACCOUNT_5=my_bot_5:password123
 ```
 
+### 3. Proxy Configuration
+
+> [!IMPORTANT]
+> **When do you need a proxy?**
+>
+> - **Local Development (No Proxy)**: ❌ Leave `IG_PROXY_1` empty → Uses your direct internet.
+> - **Local Testing (With Proxy)**: ✅ Configure `IG_PROXY_1` in `.env` → Test your proxy before deploying.
+> - **Production (Fly.io, AWS, etc)**: ✅ **REQUIRED**. Cloud servers are blocked by Instagram instantly.
+
+Instagram aggressively blocks IPs from data centers (AWS, Google Cloud, Fly.io, etc.). If you deploy to production **without a residential proxy**, you will receive `ERR_HTTP_RESPONSE_CODE_FAILURE` errors immediately.
+
+#### Option A: Local Proxy Testing (yarn dev)
+
+**Step 1:** Edit your local `.env`:
+
+```bash
+# Uncomment and configure with your real IPRoyal credentials
+IG_PROXY_1=http://abc123:xyz789@geo.iproyal.com:12321
+```
+
+**Step 2:** Run the server:
+
+```bash
+yarn dev
+```
+
+**Step 3:** verify logs:
+
+```
+🌐 Using Proxy: http://***@geo.iproyal.com:12321
+```
+
+This allows you to **prove the proxy works** before deploying.
+
+#### Option B: Production (Fly.io) - Recommended
+
+**Do NOT put the proxy in `.env`**. Use secrets:
+
+```bash
+fly secrets set IG_PROXY_1="http://user:pass@geo.iproyal.com:12321"
+```
+
+Fly.io injects the secret automatically into `process.env.IG_PROXY_1`.
+
+**Recommended Providers:**
+| Provider | Type | Approx Price | URL |
+|-----------|------|--------------|-----|
+| **IPRoyal** | Residential Pay-as-you-go | ~$7/GB | [iproyal.com](https://iproyal.com) |
+| Bright Data | Residential | ~$15/GB | [brightdata.com](https://brightdata.com) |
+| Smartproxy | Residential | ~$10/GB | [smartproxy.com](https://smartproxy.com) |
+
+> [!TIP]
+> **Data Consumption with Optimization**: This project automatically blocks images/videos/fonts. With this, each scrape consumes ~300-500KB. With 1GB of IPRoyal data, you can perform ~2,000-3,000 scrapes.
+
 ---
 
 ## 🛠️ Workflows
@@ -243,7 +297,7 @@ async function getInstagramPosts(targetUsername: string) {
         body: JSON.stringify({
           username: targetUsername,
         }),
-      }
+      },
     );
 
     const data = await response.json();
@@ -257,7 +311,7 @@ async function getInstagramPosts(targetUsername: string) {
           console.log(`📦 Posts: ${result.postsCount}`);
         } else {
           console.error(
-            `❌ Profile ${result.username} failed: ${result.error}`
+            `❌ Profile ${result.username} failed: ${result.error}`,
           );
         }
       });

@@ -46,6 +46,7 @@ RUN apt-get update && apt-get install -y \
   fonts-kacst \
   fonts-freefont-ttf \
   libxss1 \
+  redis-server \
   --no-install-recommends \
   && rm -rf /var/lib/apt/lists/*
 
@@ -80,4 +81,9 @@ HEALTHCHECK --interval=30s --timeout=10s --start-period=40s --retries=3 \
 ENTRYPOINT ["/usr/bin/tini", "--"]
 
 # Start application
-CMD ["node", "dist/main"]
+# Copy startup script
+COPY scripts/start.sh ./
+RUN chmod +x start.sh
+
+# Start application with Redis sidecar
+CMD ["./start.sh"]

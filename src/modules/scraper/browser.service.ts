@@ -129,6 +129,15 @@ export class BrowserService implements OnModuleDestroy {
     // Inject anti-detection scripts
     await this.injectAntiDetectionScripts(page);
 
+    // Optimize bandwidth: Block images, media, and fonts
+    await page.route('**/*', (route) => {
+      const resourceType = route.request().resourceType();
+      if (['image', 'media', 'font'].includes(resourceType)) {
+        return route.abort();
+      }
+      return route.continue();
+    });
+
     // Setup CDP session
     let cdpSession: CDPSession | null = null;
     try {
@@ -189,6 +198,18 @@ export class BrowserService implements OnModuleDestroy {
 
     // Add arguments to suppress profile errors and improve stability
     if (!launchOptions.args) launchOptions.args = [];
+    
+    // Proxy Configuration (Critical for Fly.io)
+    const proxyUrl = process.env.IG_PROXY_1;
+    if (proxyUrl) {
+      this.logger.log(`🌐 Using Proxy: ${proxyUrl.replace(/:[^:]*@/, ':***@')}`); // Log masked URL
+      launchOptions.proxy = {
+        server: proxyUrl,
+      };
+    } else {
+       this.logger.warn('⚠️ No Proxy configured. Running with direct connection (Risky on Fly.io)');
+    }
+
     launchOptions.args.push(
       '--no-default-browser-check',
       '--no-first-run',
@@ -204,11 +225,20 @@ export class BrowserService implements OnModuleDestroy {
 
     let browser;
     try {
-      browser = await chromium.launchPersistentContext(
+      // Use playwright-extra's chromium to support plugins
+      const { chromium: chromiumExtra } = require('playwright-extra');
+      const stealth = require('puppeteer-extra-plugin-stealth');
+      chromiumExtra.use(stealth());
+
+      browser = await chromiumExtra.launchPersistentContext(
         sessionDir,
         launchOptions,
       );
-      this.logger.log(`✅ Browser launched successfully for: ${sessionDir}`);
+      this.logger.log(`✅ Browser launched successfully for: ${sessionDir} (Stealth Mode: ON 🥷)`);
+      
+      // Override permissions again just in case plugin misses something
+      await browser.grantPermissions(['geolocation'], { origin: 'https://www.instagram.com' });
+      
     } catch (error) {
       this.logger.error(`❌ Failed to launch browser: ${error.message}`);
       this.logger.error(`Stack trace: ${error.stack}`);

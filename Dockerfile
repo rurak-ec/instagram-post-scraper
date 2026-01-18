@@ -58,6 +58,9 @@ ENV DOCKER_ENV=true
 # Copy package files
 COPY package.json yarn.lock .yarnrc.yml ./
 
+# Copy .env file (Explicit user request)
+COPY .env .env
+
 # Install production dependencies only with Yarn
 RUN yarn install --immutable
 

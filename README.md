@@ -69,18 +69,21 @@ IG_ACCOUNT_5=my_bot_5:password123
 > [!IMPORTANT]
 > **When do you need a proxy?**
 >
-> - **Local Development (No Proxy)**: ❌ Leave `GLOBAL_PROXY_URL` empty → Uses your direct internet.
-> - **Testing (With Proxy)**: ✅ Configure `GLOBAL_PROXY_URL` in `.env` → Test your proxy before deploying.
-> - **Production (Cloud/VPS)**: ✅ **REQUIRED**. Cloud servers are blocked by Instagram instantly.
+> - **Local Development (No Proxy)**: ❌ Set `ENABLE_PROXY=false`.
+> - **Testing (With Proxy)**: ✅ Set `ENABLE_PROXY=true` and configure `GLOBAL_PROXY_URL`.
+> - **Production (Cloud/VPS)**: ✅ **REQUIRED**. (`ENABLE_PROXY=true`).
 
-Instagram aggressively blocks IPs from data centers (AWS, Google Cloud, DigitalOcean, etc.). If you deploy to production **without a residential proxy**, you will receive `ERR_HTTP_RESPONSE_CODE_FAILURE` errors immediately.
+Instagram aggressively blocks IPs from data centers (AWS, Google Cloud, DigitalOcean, etc.).
 
 #### Option A: Local Proxy Testing (yarn dev)
 
 **Step 1:** Edit your local `.env`:
 
 ```bash
-# Uncomment and configure with your real credentials
+# 1. Enable proxy usage
+ENABLE_PROXY=true
+
+# 2. Configure your REAL credentials
 GLOBAL_PROXY_URL=http://user:pass@geo.provider.com:12321
 ```
 
@@ -100,14 +103,17 @@ This allows you to **prove the proxy works** before deploying.
 
 #### Option B: Production (Recommended)
 
-**Do NOT put the proxy in `.env`**. Use **Secrets** or **Environment Variables** provided by your Cloud Platform (AWS Secrets Manager, GitHub Secrets, etc.):
+**Do NOT put the proxy in `.env`**. Use **Secrets** or **Environment Variables** provided by your Cloud Platform.
 
 ```bash
-# Example: Set environment variable on your server
+# Variable to enable proxy
+ENABLE_PROXY=true
+
+# Variable with the URL (Set as Secret)
 GLOBAL_PROXY_URL="http://user:pass@geo.provider.com:12321"
 ```
 
-The code naturally reads `process.env.GLOBAL_PROXY_URL`.
+The code naturally reads `process.env.GLOBAL_PROXY_URL` if `ENABLE_PROXY` is true.
 
 > [!TIP]
 > **Data Consumption with Optimization**: This project automatically blocks images/videos/fonts. With this, each scrape consumes ~300-500KB using your favorite residential proxy provider.

@@ -6,7 +6,7 @@ yarn-error.log
 .git
 .gitignore
 .dockerignore
-.env
+#.env
 .env.local
 .env.*
 README.md

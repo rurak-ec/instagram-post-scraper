@@ -69,18 +69,21 @@ IG_ACCOUNT_5=mi_bot_5:password123
 > [!IMPORTANT]
 > **¿Cuándo necesitas un proxy?**
 >
-> - **Local Development (sin proxy)**: ❌ Deja `GLOBAL_PROXY_URL` vacío → Usa tu internet directo.
-> - **Testing (con proxy)**: ✅ Configura `GLOBAL_PROXY_URL` en `.env` → Prueba tu proxy antes de deploy.
-> - **Producción (Cloud/VPS)**: ✅ **REQUERIDO**. Los servidores cloud son bloqueados por Instagram instantáneamente.
+> - **Local Development (sin proxy)**: ❌ Setea `ENABLE_PROXY=false`.
+> - **Testing (con proxy)**: ✅ Setea `ENABLE_PROXY=true` y configura `GLOBAL_PROXY_URL`.
+> - **Producción (Cloud/VPS)**: ✅ **REQUERIDO**. (`ENABLE_PROXY=true`).
 
-Instagram bloquea agresivamente las IPs de datacenters (AWS, Google Cloud, DigitalOcean, etc). Si despliegas en producción **sin proxy residencial**, recibirás errores `ERR_HTTP_RESPONSE_CODE_FAILURE` inmediatamente.
+Instagram bloquea agresivamente las IPs de datacenters (AWS, Google Cloud, DigitalOcean, etc).
 
 #### Opción A: Testing Local del Proxy (yarn dev)
 
 **Paso 1:** Edita tu `.env` local:
 
 ```bash
-# Descomenta y configura con tus credenciales
+# 1. Habilita el uso de proxy
+ENABLE_PROXY=true
+
+# 2. Configura tus credenciales reales
 GLOBAL_PROXY_URL=http://usuario:pass@geo.proveedor.com:12321
 ```
 
@@ -100,14 +103,17 @@ Esto te permite **probar que el proxy funciona** antes de hacer deploy a producc
 
 #### Opción B: Producción (Recomendado)
 
-**NO pongas el proxy en `.env`**. Usa los **Secrets** o **Environment Variables** de tu proveedor de Cloud (AWS Secrets Manager, GitHub Secrets, etc.):
+**NO pongas el proxy en `.env`**. Usa los **Secrets** o **Environment Variables** de tu proveedor de Cloud.
 
 ```bash
-# Ejemplo: Configurar variable de entorno en tu servidor
+# Variable para habilitar
+ENABLE_PROXY=true
+
+# Variable con la URL (Setear como Secret)
 GLOBAL_PROXY_URL="http://usuario:password@geo.proveedor.com:12321"
 ```
 
-El código leerá automáticamente `process.env.GLOBAL_PROXY_URL`.
+El código leerá automáticamente `process.env.GLOBAL_PROXY_URL` si `ENABLE_PROXY` es true.
 
 > [!TIP]
 > **Consumo de Datos con Optimización**: Este proyecto bloquea imágenes/videos/fuentes automáticamente. Con esto, cada scrape consume ~300-500KB "utilizando tu proveedor de proxies residenciales favorito".

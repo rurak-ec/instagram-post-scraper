@@ -138,18 +138,20 @@ export class BrowserService implements OnModuleDestroy {
       const url = request.url();
 
       // 1. Block heavy resource types
-      if (['image', 'media', 'font', 'stylesheet'].includes(resourceType)) {
+      // Relaxed: Removed 'stylesheet' to ensure proper rendering/data loading
+      if (['image', 'media', 'font'].includes(resourceType)) {
         return route.abort();
       }
 
       // 2. Block "other" resources (often beacons, tracking, prefetch)
-      // Be careful: sometimes 'other' includes essential JSON. 
-      // Safe strategy: Block specific patterns.
-      if (resourceType === 'other' && (url.includes('logging') || url.includes('analytics'))) {
-         return route.abort();
-      }
+      // Relaxed: Commented out to avoid blocking critical logging needed for Graphql
+      // if (resourceType === 'other' && (url.includes('logging') || url.includes('analytics'))) {
+      //    return route.abort();
+      // }
 
       // 3. Block known tracking/marketing domains
+      // Relaxed: Commented out slightly to avoid false positives
+      /*
       if (
         url.includes('facebook.com/tr/') || // FB Pixel
         url.includes('google-analytics') ||
@@ -158,6 +160,7 @@ export class BrowserService implements OnModuleDestroy {
       ) {
         return route.abort();
       }
+      */
 
       return route.continue();
     });

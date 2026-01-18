@@ -713,7 +713,7 @@ export class InstagramScraperService implements OnModuleInit {
 
     try {
       // Wait for login form (accepting both standard and alternative fields)
-      await page.waitForSelector('input[name="username"], input[name="email"]', { timeout: 10000 });
+      await page.waitForSelector('input[name="username"], input[name="email"]', { timeout: 30000 });
 
       // Check for username field (standard or alternative)
       const usernameSelector = await page.isVisible('input[name="username"]') 
@@ -746,7 +746,7 @@ export class InstagramScraperService implements OnModuleInit {
       // Wait for navigation
       await page.waitForFunction(
         () => !window.location.href.includes('/accounts/login'),
-        { timeout: 35000 },
+        { timeout: 60000 },
       );
 
       await humanDelay(2500, 4500);

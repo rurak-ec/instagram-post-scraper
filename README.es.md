@@ -109,15 +109,8 @@ IG_PROXY_1="http://usuario:password@geo.proveedor.com:12321"
 
 El código leerá automáticamente `process.env.IG_PROXY_1`.
 
-**Proveedores Recomendados:**
-| Proveedor | Tipo | Precio Aprox | URL |
-|-----------|------|--------------|-----|
-| **IPRoyal** | Residencial Pay-as-you-go | ~$7/GB | [iproyal.com](https://iproyal.com) |
-| Bright Data | Residencial | ~$15/GB | [brightdata.com](https://brightdata.com) |
-| Smartproxy | Residencial | ~$10/GB | [smartproxy.com](https://smartproxy.com) |
-
 > [!TIP]
-> **Consumo de Datos con Optimización**: Este proyecto bloquea imágenes/videos/fuentes automáticamente. Con esto, cada scrape consume ~300-500KB. Con 1GB de IPRoyal puedes hacer ~2,000-3,000 scrapes.
+> **Consumo de Datos con Optimización**: Este proyecto bloquea imágenes/videos/fuentes automáticamente. Con esto, cada scrape consume ~300-500KB "utilizando tu proveedor de proxies residenciales favorito".
 
 ---
 

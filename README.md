@@ -69,8 +69,8 @@ IG_ACCOUNT_5=my_bot_5:password123
 > [!IMPORTANT]
 > **When do you need a proxy?**
 >
-> - **Local Development (No Proxy)**: ❌ Leave `IG_PROXY_1` empty → Uses your direct internet.
-> - **Testing (With Proxy)**: ✅ Configure `IG_PROXY_1` in `.env` → Test your proxy before deploying.
+> - **Local Development (No Proxy)**: ❌ Leave `GLOBAL_PROXY_URL` empty → Uses your direct internet.
+> - **Testing (With Proxy)**: ✅ Configure `GLOBAL_PROXY_URL` in `.env` → Test your proxy before deploying.
 > - **Production (Cloud/VPS)**: ✅ **REQUIRED**. Cloud servers are blocked by Instagram instantly.
 
 Instagram aggressively blocks IPs from data centers (AWS, Google Cloud, DigitalOcean, etc.). If you deploy to production **without a residential proxy**, you will receive `ERR_HTTP_RESPONSE_CODE_FAILURE` errors immediately.
@@ -81,7 +81,7 @@ Instagram aggressively blocks IPs from data centers (AWS, Google Cloud, DigitalO
 
 ```bash
 # Uncomment and configure with your real credentials
-IG_PROXY_1=http://user:pass@geo.provider.com:12321
+GLOBAL_PROXY_URL=http://user:pass@geo.provider.com:12321
 ```
 
 **Step 2:** Run the server:
@@ -104,10 +104,10 @@ This allows you to **prove the proxy works** before deploying.
 
 ```bash
 # Example: Set environment variable on your server
-IG_PROXY_1="http://user:pass@geo.provider.com:12321"
+GLOBAL_PROXY_URL="http://user:pass@geo.provider.com:12321"
 ```
 
-The code naturally reads `process.env.IG_PROXY_1`.
+The code naturally reads `process.env.GLOBAL_PROXY_URL`.
 
 > [!TIP]
 > **Data Consumption with Optimization**: This project automatically blocks images/videos/fonts. With this, each scrape consumes ~300-500KB using your favorite residential proxy provider.

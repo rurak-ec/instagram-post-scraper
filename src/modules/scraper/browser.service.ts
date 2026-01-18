@@ -265,7 +265,7 @@ export class BrowserService implements OnModuleDestroy {
     
     // Proxy Configuration
     const enableProxy = process.env.ENABLE_PROXY === 'true';
-    const proxyUrl = process.env.IG_PROXY_1;
+    const proxyUrl = process.env.GLOBAL_PROXY_URL;
 
     if (enableProxy && proxyUrl) {
       try {
@@ -287,7 +287,7 @@ export class BrowserService implements OnModuleDestroy {
        if (!enableProxy) {
          this.logger.log('🚫 Proxy disabled via ENABLE_PROXY=false. Using direct connection.');
        } else {
-         this.logger.warn('⚠️ ENABLE_PROXY is true but IG_PROXY_1 is missing. Using direct connection (Risk of IP ban).');
+         this.logger.warn('⚠️ ENABLE_PROXY is true but GLOBAL_PROXY_URL is missing. Using direct connection (Risk of IP ban).');
        }
     }
 

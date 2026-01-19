@@ -69,4 +69,8 @@ export default () => ({
   corsOrigins: process.env.CORS_ORIGINS
     ? process.env.CORS_ORIGINS.split(',').map((origin) => origin.trim())
     : ['http://localhost:3001', 'http://localhost:4000'],
+
+  // Proxy
+  enableProxy: process.env.ENABLE_PROXY === 'true',
+  globalProxyUrl: process.env.GLOBAL_PROXY_URL || '',
 });

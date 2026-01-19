@@ -129,7 +129,8 @@ export class BrowserService implements OnModuleDestroy {
     // Inject anti-detection scripts
     await this.injectAntiDetectionScripts(page);
 
-    // Optimize bandwidth: Aggressive blocking
+    // Optimize bandwidth: AGGRESSIVE blocking
+    // We only need to intercept GraphQL fetch responses, so block almost everything
     const bytesByType = new Map<string, number>();
     
     await page.route('**/*', (route) => {
@@ -137,30 +138,43 @@ export class BrowserService implements OnModuleDestroy {
       const resourceType = request.resourceType();
       const url = request.url();
 
-      // 1. Block heavy resource types
-      // Relaxed: Removed 'stylesheet' to ensure proper rendering/data loading
-      if (['image', 'media', 'font'].includes(resourceType)) {
+      // ALLOW list - only essential resources for GraphQL interception
+      const allowedTypes = ['document', 'xhr', 'fetch', 'script'];
+      
+      // Always allow GraphQL requests (this is what we need!)
+      if (url.includes('/graphql/') || url.includes('/api/v1/')) {
+        return route.continue();
+      }
+
+      // Block everything NOT in allow list
+      if (!allowedTypes.includes(resourceType)) {
         return route.abort();
       }
 
-      // 2. Block "other" resources (often beacons, tracking, prefetch)
-      // Relaxed: Commented out to avoid blocking critical logging needed for Graphql
-      // if (resourceType === 'other' && (url.includes('logging') || url.includes('analytics'))) {
-      //    return route.abort();
-      // }
+      // Block CDN media (videos/images) even if they come as fetch
+      if (
+        url.includes('scontent') || // CDN media (scontent-*.cdninstagram.com)
+        url.includes('.cdninstagram.com/o1/') || // Video/image blobs
+        url.includes('.fbcdn.net/o1/') || // Facebook CDN media
+        url.includes('.wasm') // WebAssembly files
+      ) {
+        return route.abort();
+      }
 
-      // 3. Block known tracking/marketing domains
-      // Relaxed: Commented out slightly to avoid false positives
-      /*
+      // Block known heavy/tracking domains even for allowed types
       if (
         url.includes('facebook.com/tr/') || // FB Pixel
         url.includes('google-analytics') ||
         url.includes('googletagmanager') ||
-        url.includes('/logging_client_events') // IG Logging
+        url.includes('/logging_client_events') || // IG Logging
+        url.includes('connect.facebook.net') ||
+        url.includes('static.ak.facebook.com') ||
+        url.includes('pixel') ||
+        url.includes('analytics') ||
+        url.includes('tracking')
       ) {
         return route.abort();
       }
-      */
 
       return route.continue();
     });
@@ -236,6 +250,93 @@ export class BrowserService implements OnModuleDestroy {
   }
 
   /**
+   * Setup aggressive route blocking for bandwidth optimization
+   * Call this on any page to block images, videos, fonts, and heavy resources
+   * Also tracks bandwidth consumption per page
+   */
+  async setupRouteBlocking(page: Page, targetUrl?: string): Promise<void> {
+    // Track bandwidth
+    const bytesByType = new Map<string, number>();
+
+    await page.route('**/*', (route) => {
+      const request = route.request();
+      const resourceType = request.resourceType();
+      const url = request.url();
+
+      // ALLOW list - only essential resources for GraphQL interception
+      const allowedTypes = ['document', 'xhr', 'fetch', 'script'];
+      
+      // Always allow GraphQL requests (this is what we need!)
+      if (url.includes('/graphql/') || url.includes('/api/v1/')) {
+        return route.continue();
+      }
+
+      // Block everything NOT in allow list
+      if (!allowedTypes.includes(resourceType)) {
+        return route.abort();
+      }
+
+      // Block CDN media (videos/images) even if they come as fetch
+      if (
+        url.includes('scontent') || // CDN media (scontent-*.cdninstagram.com)
+        url.includes('.cdninstagram.com/o1/') || // Video/image blobs
+        url.includes('.fbcdn.net/o1/') || // Facebook CDN media
+        url.includes('.wasm') // WebAssembly files
+      ) {
+        return route.abort();
+      }
+
+      // Block known heavy/tracking domains even for allowed types
+      if (
+        url.includes('facebook.com/tr/') || // FB Pixel
+        url.includes('google-analytics') ||
+        url.includes('googletagmanager') ||
+        url.includes('/logging_client_events') || // IG Logging
+        url.includes('connect.facebook.net') ||
+        url.includes('static.ak.facebook.com') ||
+        url.includes('pixel') ||
+        url.includes('analytics') ||
+        url.includes('tracking')
+      ) {
+        return route.abort();
+      }
+
+      return route.continue();
+    });
+
+    // Measure bandwidth
+    page.on('response', (response) => {
+      try {
+        const headers = response.headers();
+        const length = parseInt(headers['content-length'] || '0', 10);
+        const request = response.request();
+        const type = request.resourceType();
+        
+        const current = bytesByType.get(type) || 0;
+        bytesByType.set(type, current + length);
+      } catch (e) {
+        // Ignore errors calculating size
+      }
+    });
+
+    // Log bandwidth on close
+    page.on('close', () => {
+      let totalBytes = 0;
+      const breakdown: string[] = [];
+
+      bytesByType.forEach((bytes, type) => {
+        totalBytes += bytes;
+        const mb = (bytes / 1024 / 1024).toFixed(2);
+        breakdown.push(`${type}: ${mb} MB`);
+      });
+
+      const totalMb = (totalBytes / 1024 / 1024).toFixed(2);
+      const label = targetUrl || 'scrape page';
+      this.logger.log(`📊 Bandwidth for ${label}: ${totalMb} MB (${breakdown.join(', ')})`);
+    });
+  }
+
+  /**
    * Close entire browser instance for a session
    */
   async closeBrowserForSession(sessionDir: string): Promise<void> {
@@ -267,8 +368,8 @@ export class BrowserService implements OnModuleDestroy {
     if (!launchOptions.args) launchOptions.args = [];
     
     // Proxy Configuration
-    const enableProxy = process.env.ENABLE_PROXY === 'true';
-    const proxyUrl = process.env.GLOBAL_PROXY_URL;
+    const enableProxy = this.configService.get<boolean>('enableProxy', false);
+    const proxyUrl = this.configService.get<string>('globalProxyUrl', '');
 
     if (enableProxy && proxyUrl) {
       try {

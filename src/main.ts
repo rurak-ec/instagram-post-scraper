@@ -1,15 +1,23 @@
 import { NestFactory } from '@nestjs/core';
+import {
+  FastifyAdapter,
+  NestFastifyApplication,
+} from '@nestjs/platform-fastify';
 import { ValidationPipe, Logger } from '@nestjs/common';
 import { SwaggerModule, DocumentBuilder } from '@nestjs/swagger';
 import { AppModule } from './app.module';
 
 async function bootstrap() {
   const logger = new Logger('Bootstrap');
-  const app = await NestFactory.create(AppModule, {
-    logger: process.env.VERBOSE_LOGS === 'true'
-      ? ['log', 'debug', 'error', 'verbose', 'warn']
-      : ['log', 'error', 'warn'],
-  });
+  const app = await NestFactory.create(
+    AppModule,
+    new FastifyAdapter(),
+    {
+      logger: process.env.VERBOSE_LOGS === 'true'
+        ? ['log', 'debug', 'error', 'verbose', 'warn']
+        : ['log', 'error', 'warn'],
+    },
+  );
 
   // Global validation pipe
   app.useGlobalPipes(
@@ -45,13 +53,13 @@ async function bootstrap() {
     .build();
 
   const document = SwaggerModule.createDocument(app, config);
-  SwaggerModule.setup('api/docs', app, document);
+  SwaggerModule.setup('docs', app, document);
 
   const port = process.env.PORT || 3000;
-  await app.listen(port);
+  await app.listen(port, '0.0.0.0');
 
   logger.log(`🚀 Instagram Scraper API running on: http://localhost:${port}`);
-  logger.log(`📚 API Documentation available at: http://localhost:${port}/api/docs`);
+  logger.log(`📚 API Documentation available at: http://localhost:${port}/docs`);
   logger.log(`🌍 Environment: ${process.env.NODE_ENV || 'development'}`);
   logger.log(`🔧 Headless mode: ${process.env.HEADLESS === 'true' ? 'enabled' : 'disabled'}`);
 }

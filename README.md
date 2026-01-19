@@ -3,6 +3,15 @@
 > **Project Status**: Active & Stable 🚀
 > **Tech Stack**: NestJS, Playwright, Docker, TypeScript
 
+## ✨ Key Features
+
+- **Smart Account Rotation**: Automatically rotates between multiple Instagram accounts
+- **10-Minute Cache**: Results are cached to reduce load and speed up repeated requests
+- **Rate Limiting**: Returns HTTP 429 when max concurrent requests reached (max = number of IG accounts)
+- **Aggressive Optimization**: Blocks images/media (~64% bandwidth reduction)
+- **Production Ready**: Optimized for Headless mode and Proxy support
+- **Ban Evasion**: Human-like behavior simulation with random delays
+
 [🇪🇸 Leer en Español](./README.es.md)
 
 Robust REST API for Instagram scraping, specifically designed for developers who need high availability and ban evasion through an intelligent account rotation system.
@@ -415,6 +424,47 @@ curl http://localhost:3000/accounts/status
 ```
 
 > **Note**: An account is marked as `inactive` after 3 consecutive failures. The automatic repair system will attempt to restore it in the background.
+
+---
+
+## ⚡ Caching & Rate Limiting
+
+### Optimization & Bandwidth
+
+The scraper implements **aggressive resource blocking** to minimize bandwidth usage and detection:
+
+- 🚫 **Blocks**: Images, Videos, Fonts, CSS, Analytics, Trackers
+- ✅ **Allows**: HTML, Essential XHR/Fetch (GraphQL)
+- **Result**: ~9MB per scrape (approx 64% reduction from standard browsing)
+
+### Result Caching (10 Minutes)
+
+All scrape results are **cached for 10 minutes** by username. If you request the same profile within 10 minutes, the cached result is returned instantly.
+
+```bash
+# First request - scrapes from Instagram
+curl -X POST http://localhost:3000/instagram-post-scraper \
+  -d '{"username": "natgeo"}'
+
+# Second request within 10 min - returns cached data (instant)
+curl -X POST http://localhost:3000/instagram-post-scraper \
+  -d '{"username": "natgeo"}'
+```
+
+### Rate Limiting (HTTP 429)
+
+The API limits concurrent requests to the **number of configured Instagram accounts**. If you exceed this limit:
+
+```json
+{
+  "statusCode": 429,
+  "message": "Too many concurrent requests. Please try again later.",
+  "activeRequests": 3,
+  "maxConcurrent": 3
+}
+```
+
+> **Tip**: Add more Instagram accounts to increase your concurrency limit.
 
 ---
 

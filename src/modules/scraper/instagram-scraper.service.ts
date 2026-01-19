@@ -375,6 +375,9 @@ export class InstagramScraperService implements OnModuleInit {
       throw new Error(`Failed to create page for @${targetUsername}`);
     }
 
+    // CRITICAL: Setup route blocking for bandwidth optimization
+    await this.browserService.setupRouteBlocking(page, profileUrl);
+
     // Track CDP session for cleanup
     let cdpSession: any = null;
 

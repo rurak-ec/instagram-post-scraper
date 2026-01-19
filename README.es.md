@@ -3,6 +3,15 @@
 > **Estado del Proyecto**: Activo & Estable 🚀
 > **Tech Stack**: NestJS, Playwright, Docker, TypeScript
 
+## ✨ Características Principales
+
+- **Rotación Inteligente de Cuentas**: Rota automáticamente entre múltiples cuentas de Instagram
+- **Cache de 10 Minutos**: Los resultados se cachean para reducir carga y acelerar peticiones repetidas
+- **Rate Limiting**: Devuelve HTTP 429 cuando se alcanza el máximo de peticiones concurrentes (máx = número de cuentas IG)
+- **Optimización Agresiva**: Bloqueo de imágenes/media (~64% reducción de ancho de banda)
+- **Listo para Producción**: Optimizado para modo Headless y soporte de Proxy
+- **Evasión de Bloqueos**: Simulación de comportamiento humano con delays aleatorios
+
 [🇺🇸 Read in English](./README.md)
 
 API REST robusta para scraping de Instagram, diseñada específicamente para desarrolladores que necesitan alta disponibilidad y evasión de bloqueos mediante un sistema inteligente de rotación de cuentas.
@@ -400,6 +409,47 @@ curl http://localhost:3000/accounts/status
 ```
 
 > **Nota**: Una cuenta se marca como `inactiva` después de 3 fallos consecutivos. El sistema de reparación automática intentará restaurarla en segundo plano.
+
+---
+
+## ⚡ Caché y Rate Limiting
+
+### Optimización y Ancho de Banda
+
+El scraper implementa **bloqueo agresivo de recursos** para minimizar el uso de ancho de banda y la detección:
+
+- 🚫 **Bloquea**: Imágenes, Videos, Fuentes, CSS, Analytics, Trackers
+- ✅ **Permite**: HTML, XHR/Fetch Esenciales (GraphQL)
+- **Resultado**: ~9MB por scrape (aprox 64% de reducción frente a navegación estándar)
+
+### Caché de Resultados (10 Minutos)
+
+Todos los resultados de scrape se **cachean por 10 minutos** por username. Si solicitas el mismo perfil dentro de 10 minutos, el resultado cacheado se devuelve instantáneamente.
+
+```bash
+# Primera petición - scrapea desde Instagram
+curl -X POST http://localhost:3000/instagram-post-scraper \
+  -d '{"username": "natgeo"}'
+
+# Segunda petición dentro de 10 min - devuelve datos cacheados (instantáneo)
+curl -X POST http://localhost:3000/instagram-post-scraper \
+  -d '{"username": "natgeo"}'
+```
+
+### Rate Limiting (HTTP 429)
+
+La API limita las peticiones concurrentes al **número de cuentas de Instagram configuradas**. Si excedes este límite:
+
+```json
+{
+  "statusCode": 429,
+  "message": "Too many concurrent requests. Please try again later.",
+  "activeRequests": 3,
+  "maxConcurrent": 3
+}
+```
+
+> **Tip**: Agrega más cuentas de Instagram para aumentar tu límite de concurrencia.
 
 ---
 

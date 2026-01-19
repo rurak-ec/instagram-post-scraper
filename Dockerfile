@@ -46,7 +46,6 @@ RUN apt-get update && apt-get install -y \
   fonts-kacst \
   fonts-freefont-ttf \
   libxss1 \
-  redis-server \
   --no-install-recommends \
   && rm -rf /var/lib/apt/lists/*
 

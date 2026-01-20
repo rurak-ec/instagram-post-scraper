@@ -708,9 +708,6 @@ export class InstagramScraperService implements OnModuleInit {
     return loginForm > 0;
   }
 
-  /**
-   * Perform Instagram login
-   */
   private async performLogin(page: Page, account: IgAccount): Promise<void> {
     this.logger.log(`🔐 Performing login for: ${account.username}`);
 
@@ -746,18 +743,72 @@ export class InstagramScraperService implements OnModuleInit {
         await page.click(loginTextSelector);
       }
 
-      // Wait for navigation
-      await page.waitForFunction(
-        () => !window.location.href.includes('/accounts/login'),
-        { timeout: 60000 },
-      );
+      // Wait for navigation (allow timeout to check for checkpoints)
+      try {
+        await page.waitForFunction(
+          () => !window.location.href.includes('/accounts/login'),
+          { timeout: 60000 },
+        );
+      } catch (e) {
+        this.logger.warn(`⚠️ Navigation wait timed out or failed: ${e.message}. Checking for checkpoints/errors on current page...`);
+        this.logger.warn(`📍 Current URL: ${page.url()}`);
+      }
 
       await humanDelay(2500, 4500);
+
+      // Handle potential checkpoint/challenge
+      await this.handleCheckpoint(page, account);
+
+      // Verify if checkpoint persists or we are still on challenge page
+      if (page.url().includes('/challenge/')) {
+        throw new Error(`Account ${account.username} is inhabilitada (challenge) - Failed to resolve checkpoint`);
+      }
 
       this.logger.log(`✅ Login successful for: ${account.username}`);
     } catch (error) {
       this.logger.error(`❌ Login failed: ${error.message}`);
       throw new Error(`Login failed for ${account.username}`);
+    }
+  }
+
+  /**
+   * Handle potential checkpoint/challenge screens
+   */
+  private async handleCheckpoint(page: Page, account: IgAccount): Promise<void> {
+    const url = page.url();
+    if (url.includes('/challenge/')) {
+      this.logger.log(`🛡️ Checkpoint detected for ${account.username}: ${url}`);
+      await humanDelay(3000, 5000);
+
+      const checkpointSelectors = [
+        'button:has-text("Esta fui yo")',
+        'button:has-text("This was me")',
+        'button:has-text("It was me")',
+        'div[role="button"]:has-text("Esta fui yo")',
+        'div[role="button"]:has-text("This was me")',
+        'div[role="button"]:has-text("It was me")',
+        '[aria-label="Esta fui yo"]',
+        '[aria-label="This was me"]',
+        '[aria-label="It was me"]'
+      ];
+
+      for (const selector of checkpointSelectors) {
+        try {
+          if (await page.isVisible(selector)) {
+            this.logger.log(`👆 Clicking checkpoint button for ${account.username} (selector: ${selector})`);
+            await page.click(selector);
+            // Wait for navigation after click
+            await page.waitForNavigation({ timeout: 15000 }).catch(() => {
+              this.logger.debug('No navigation detected after checkpoint click, continuing...');
+            });
+            await humanDelay(2000, 4000);
+            return;
+          }
+        } catch (err) {
+          this.logger.debug(`Error checking/clicking selector ${selector}: ${err.message}`);
+        }
+      }
+      this.logger.warn(`⚠️ Checkpoint detected but no automatic button found for ${account.username}`);
     }
   }
 

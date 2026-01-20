@@ -253,10 +253,18 @@ export class AccountsService implements OnModuleInit {
       currentStatus.lastFailure = now;
       currentStatus.failureReason = error || 'Unknown error';
       currentStatus.consecutiveFailures += 1;
-      // Mark as inactive after 3 consecutive failures
-      if (currentStatus.consecutiveFailures >= 3) {
+
+      // Check for critical errors that require immediate disabling
+      const isCriticalError = (error || '').toLowerCase().includes('challenge') || 
+                              (error || '').toLowerCase().includes('inhabilitada') || 
+                              (error || '').toLowerCase().includes('suspended') || 
+                              (error || '').toLowerCase().includes('banned');
+
+      // Mark as inactive immediately for critical errors, or after 3 consecutive failures
+      if (isCriticalError || currentStatus.consecutiveFailures >= 3) {
         currentStatus.isActive = false;
-        this.logger.warn(`⚠️ Account ${username} marked as INACTIVE after ${currentStatus.consecutiveFailures} failures`);
+        const reason = isCriticalError ? 'CRITICAL ERROR' : 'Too many failures';
+        this.logger.warn(`⚠️ Account ${username} marked as INACTIVE (${reason}): ${error}`);
       } else {
         this.logger.warn(`⚠️ Account ${username} failed (${currentStatus.consecutiveFailures}/3): ${error}`);
       }
